@@ -1,669 +1,895 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>老鹰抓鱼 🦅</title>
+<title>校园迷宫大冒险</title>
 <style>
+  /* 页面基础样式 */
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background: #1a1a2e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    font-family: 'Arial', sans-serif;
-    overflow: hidden;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; font-family: 'Arial', sans-serif; overflow: hidden;
   }
+
+  /* 游戏容器 */
   #gameContainer {
     position: relative;
-    width: 480px;
-    height: 640px;
+    width: 640px; height: 640px;
+    border: 4px solid #e94560;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(233,69,96,0.5);
     overflow: hidden;
-    border-radius: 16px;
-    box-shadow: 0 0 40px rgba(0,200,255,0.4);
   }
+
+  /* 画布放在最底层 */
   #gameCanvas {
-    position: absolute;
-    top: 0; left: 0;
+    position: absolute; top: 0; left: 0;
     z-index: 1;
     display: none;
   }
-  /* Start Screen */
+
+  /* 开始屏幕覆盖层 */
   #startScreen {
-    position: absolute;
-    top: 0; left: 0;
+    position: relative; z-index: 100;
     width: 100%; height: 100%;
-    z-index: 100;
+    background: linear-gradient(160deg, #0f3460, #533483);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
     pointer-events: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 55%, #1565C0 55%, #1976D2 100%);
   }
-  #startScreen h1 {
-    font-size: 42px;
-    color: #fff;
-    text-shadow: 3px 3px 0 #c8621a, -1px -1px 0 #c8621a;
-    margin-bottom: 8px;
-    letter-spacing: 4px;
+
+  /* 游戏结束/通关屏幕 */
+  #overlayScreen {
+    position: absolute; top: 0; left: 0;
+    z-index: 200;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.82);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    pointer-events: auto;
   }
-  #startScreen .subtitle {
-    font-size: 16px;
-    color: #fff3e0;
-    margin-bottom: 30px;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+
+  .title {
+    font-size: 36px; font-weight: bold;
+    color: #FFD700; text-shadow: 3px 3px 0 #e94560;
+    margin-bottom: 10px; letter-spacing: 2px;
   }
-  .eagle-icon { font-size: 80px; margin-bottom: 16px; animation: float 2s ease-in-out infinite; }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-  .rules-box {
-    background: rgba(255,255,255,0.85);
-    border-radius: 14px;
-    padding: 16px 24px;
-    margin-bottom: 28px;
-    max-width: 340px;
-    text-align: left;
+  .subtitle { font-size: 16px; color: #aef; margin-bottom: 30px; }
+  .instructions {
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 18px 28px;
+    color: #fff; font-size: 14px; line-height: 2;
+    margin-bottom: 30px; max-width: 340px;
+    border: 1px solid rgba(255,255,255,0.2);
   }
-  .rules-box h3 { color: #c8621a; margin-bottom: 8px; font-size: 16px; }
-  .rules-box p { font-size: 13px; color: #333; line-height: 1.8; }
-  .rules-box span { font-size: 15px; }
-  #startBtn {
-    background: linear-gradient(135deg, #ff8c00, #ff4500);
-    color: white;
-    border: none;
-    padding: 16px 48px;
-    font-size: 22px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: bold;
-    letter-spacing: 2px;
-    box-shadow: 0 6px 20px rgba(255,100,0,0.5);
+  .instructions span { color: #FFD700; font-weight: bold; }
+
+  /* 按钮样式 */
+  .bigBtn {
+    padding: 14px 48px; font-size: 22px; font-weight: bold;
+    background: linear-gradient(135deg, #e94560, #c62a47);
+    color: #fff; border: none; border-radius: 50px;
+    cursor: pointer; letter-spacing: 2px;
+    box-shadow: 0 6px 20px rgba(233,69,96,0.5);
     transition: transform 0.1s, box-shadow 0.1s;
-  }
-  #startBtn:hover { transform: scale(1.07); box-shadow: 0 8px 28px rgba(255,100,0,0.7); }
-  /* Game Over Screen */
-  #gameOverScreen {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 100;
     pointer-events: auto;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.75);
   }
-  #gameOverScreen h2 { font-size: 48px; color: #ff4444; text-shadow: 2px 2px 0 #800; margin-bottom: 10px; }
-  #gameOverScreen .score-display {
-    font-size: 22px; color: #ffd700; margin-bottom: 6px;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-  }
-  #gameOverScreen .high-score-display {
-    font-size: 17px; color: #aaa; margin-bottom: 30px;
-  }
-  #restartBtn {
-    background: linear-gradient(135deg, #00c853, #00796b);
-    color: white;
-    border: none;
-    padding: 14px 44px;
-    font-size: 20px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: bold;
-    box-shadow: 0 6px 20px rgba(0,200,100,0.5);
-    transition: transform 0.1s;
-  }
-  #restartBtn:hover { transform: scale(1.07); }
-  /* HUD */
+  .bigBtn:hover { transform: scale(1.07); box-shadow: 0 8px 28px rgba(233,69,96,0.7); }
+  .bigBtn:active { transform: scale(0.97); }
+
+  /* HUD 信息栏 */
   #hud {
-    position: absolute;
-    top: 10px; left: 0; right: 0;
-    z-index: 50;
     display: none;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 14px;
-    pointer-events: none;
+    width: 640px;
+    background: #0f3460;
+    border: 2px solid #e94560;
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+    padding: 8px 20px;
+    flex-direction: row; align-items: center; justify-content: space-between;
+    box-shadow: 0 -4px 15px rgba(233,69,96,0.3);
   }
-  .hud-box {
-    background: rgba(0,0,0,0.45);
-    border-radius: 20px;
-    padding: 5px 14px;
-    color: #fff;
-    font-size: 15px;
-    font-weight: bold;
+  .hud-item { color: #fff; font-size: 16px; font-weight: bold; }
+  .hud-item span { color: #FFD700; }
+  .heart { color: #e94560; font-size: 20px; }
+
+  #overlayTitle { font-size: 42px; font-weight: bold; color: #FFD700; text-shadow: 3px 3px 0 #e94560; margin-bottom: 12px; }
+  #overlayMsg { font-size: 18px; color: #fff; margin-bottom: 30px; text-align: center; line-height: 1.8; }
+
+  /* 移动端方向键 */
+  #dpad {
+    display: none;
+    position: fixed; bottom: 20px; right: 20px;
+    z-index: 999;
   }
-  .hud-box span { font-size: 18px; }
-  #livesDisplay { color: #ff6b6b; }
-  #scoreDisplay { color: #ffd700; }
-  #levelDisplay { color: #69f0ae; }
+  .dpad-row { display: flex; justify-content: center; }
+  .dpad-btn {
+    width: 50px; height: 50px; margin: 3px;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 10px; color: #fff; font-size: 22px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none;
+  }
+
+  @media (max-width: 680px) {
+    #gameContainer { width: 360px; height: 360px; }
+    #hud { width: 360px; }
+    #dpad { display: block; }
+    .title { font-size: 26px; }
+  }
 </style>
 </head>
 <body>
+
+<!-- 顶部信息栏 -->
+<div id="hud">
+  <div class="hud-item">❤️ <span id="livesDisplay">❤️❤️❤️</span></div>
+  <div class="hud-item">🗝️ 钥匙: <span id="keysDisplay">0/5</span></div>
+  <div class="hud-item">📚 第 <span id="levelDisplay">1</span> 关</div>
+</div>
+
+<!-- 游戏主容器 -->
 <div id="gameContainer">
-  <!-- Canvas layer (behind UI) -->
-  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <!-- 游戏画布（隐藏直到游戏开始） -->
+  <canvas id="gameCanvas" width="640" height="640"></canvas>
 
-  <!-- HUD -->
-  <div id="hud">
-    <div class="hud-box" id="livesDisplay">❤️ <span id="livesVal">3</span></div>
-    <div class="hud-box" id="scoreDisplay">🐟 <span id="scoreVal">0</span></div>
-    <div class="hud-box" id="levelDisplay">Lv.<span id="levelVal">1</span></div>
-  </div>
-
-  <!-- Start Screen -->
+  <!-- 开始屏幕 -->
   <div id="startScreen">
-    <div class="eagle-icon">🦅</div>
-    <h1>老鹰抓鱼</h1>
-    <p class="subtitle">Eagle Fishing Master</p>
-    <div class="rules-box">
-      <h3>🎮 游戏说明</h3>
-      <p><span>🖱️ 鼠标/手指</span> 控制老鹰移动</p>
-      <p><span>🐟</span> 俯冲入水抓鱼得分</p>
-      <p><span>🐊</span> 碰到鳄鱼会失去生命</p>
-      <p><span>🐦</span> 小心天上的其他鸟儿</p>
-      <p><span>❤️</span> 共有 3 条命，加油！</p>
+    <div class="title">🏫 校园迷宫</div>
+    <div class="subtitle">大冒险！找到钥匙，打开图书馆！</div>
+    <div class="instructions">
+      🎮 <span>方向键</span> 移动小同学<br>
+      🗝️ 收集 <span>5把钥匙</span> 解锁终点门<br>
+      👨‍🏫 躲开巡逻老师，否则 <span>扣一条命</span><br>
+      ❤️ 共有 <span>3条命</span>，加油！<br>
+      📚 <span>共3关</span>，难度逐渐增加
     </div>
-    <button id="startBtn">🦅 开始游戏</button>
+    <button class="bigBtn" id="startBtn">🚀 开始游戏</button>
   </div>
 
-  <!-- Game Over Screen -->
-  <div id="gameOverScreen">
-    <h2>💀 游戏结束</h2>
-    <div class="score-display">得分：<span id="finalScore">0</span> 条鱼</div>
-    <div class="high-score-display">最高分：<span id="highScoreVal">0</span> 条鱼</div>
-    <button id="restartBtn">🔄 再玩一次</button>
+  <!-- 通用覆盖屏幕（游戏结束/过关） -->
+  <div id="overlayScreen">
+    <div id="overlayTitle">标题</div>
+    <div id="overlayMsg">消息</div>
+    <button class="bigBtn" id="overlayBtn">按钮</button>
+  </div>
+</div>
+
+<!-- 移动端方向键 -->
+<div id="dpad">
+  <div class="dpad-row"><div class="dpad-btn" id="dUp">▲</div></div>
+  <div class="dpad-row">
+    <div class="dpad-btn" id="dLeft">◀</div>
+    <div class="dpad-btn" id="dDown">▼</div>
+    <div class="dpad-btn" id="dRight">▶</div>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // ─── Elements ───────────────────────────────────────────
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  const startScreen = document.getElementById('startScreen');
-  const gameOverScreen = document.getElementById('gameOverScreen');
-  const hud = document.getElementById('hud');
-  const livesVal = document.getElementById('livesVal');
-  const scoreVal = document.getElementById('scoreVal');
-  const levelVal = document.getElementById('levelVal');
-  const finalScore = document.getElementById('finalScore');
-  const highScoreVal = document.getElementById('highScoreVal');
+  // ============================================================
+  // 常量设置
+  // ============================================================
+  const TILE = 40;       // 每格像素大小
+  const COLS = 16;       // 列数
+  const ROWS = 16;       // 行数
 
-  // ─── Game State ─────────────────────────────────────────
-  let score = 0, lives = 3, level = 1, highScore = 0;
-  let gameRunning = false;
-  let animFrame;
-  const WATER_Y = H * 0.52; // water surface y position
-
-  // ─── Eagle ──────────────────────────────────────────────
-  const eagle = {
-    x: W / 2, y: 120,
-    w: 54, h: 38,
-    targetX: W / 2, targetY: 120,
-    vx: 0, vy: 0,
-    diving: false,     // flying down into water
-    returning: false,  // flying back up
-    inWater: false,
-    invincible: 0,     // frames of invincibility
-    catchEffect: 0,    // frames for catch flash
-    diveStartY: 0
+  // 地图元素类型
+  const T = {
+    FLOOR: 0,
+    WALL:  1,
+    KEY:   2,
+    DOOR:  3,
+    SIGN:  4,
+    START: 5
   };
 
-  // ─── Clouds ─────────────────────────────────────────────
-  const clouds = [];
-  function spawnCloud() {
-    clouds.push({
-      x: W + 60,
-      y: 30 + Math.random() * (WATER_Y * 0.45),
-      w: 60 + Math.random() * 70,
-      h: 30 + Math.random() * 20,
-      speed: 0.4 + Math.random() * 0.5
-    });
+  // ============================================================
+  // 3关地图定义（0=地板 1=墙 2=钥匙 3=终点门 4=提示牌 5=出生点）
+  // ============================================================
+  const levels = [
+    { // 第1关 - 简单
+      map: [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,5,0,0,1,0,0,0,0,0,0,0,0,0,0,1],
+        [1,0,1,0,1,0,1,1,1,0,1,1,0,1,0,1],
+        [1,0,1,0,0,0,1,2,0,0,0,1,0,1,0,1],
+        [1,0,1,1,1,0,1,1,1,1,0,1,0,1,0,1],
+        [1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1],
+        [1,1,1,0,1,1,1,0,1,1,1,1,1,0,1,1],
+        [1,2,0,0,0,0,1,0,0,0,0,0,1,0,0,1],
+        [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1],
+        [1,0,1,0,0,0,0,0,0,0,1,0,0,0,2,1],
+        [1,0,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+        [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1],
+        [1,1,1,1,1,0,1,0,1,1,1,0,1,1,0,1],
+        [1,2,0,0,1,0,1,0,0,0,0,0,0,0,0,1],
+        [1,0,1,4,1,0,0,0,1,1,0,1,1,2,3,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      ],
+      teacherPaths: [
+        [{x:5,y:1},{x:12,y:1},{x:12,y:5},{x:5,y:5}],
+        [{x:1,y:7},{x:1,y:13},{x:6,y:13},{x:6,y:7}],
+      ],
+      teacherSpeed: 0.025
+    },
+    { // 第2关 - 中等
+      map: [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,5,0,1,0,0,0,0,0,1,0,0,0,0,0,1],
+        [1,0,0,1,0,1,1,0,0,1,0,1,1,1,0,1],
+        [1,1,0,1,0,1,2,0,1,1,0,0,0,1,0,1],
+        [1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+        [1,0,1,1,1,1,0,1,1,1,0,1,0,1,1,1],
+        [1,0,0,0,0,0,0,1,0,0,0,0,0,0,2,1],
+        [1,1,1,1,0,1,0,1,0,1,1,1,1,1,0,1],
+        [1,2,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+        [1,0,0,1,1,1,1,0,1,1,1,0,0,1,0,1],
+        [1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1],
+        [1,0,1,0,1,0,1,1,1,1,0,1,1,1,0,1],
+        [1,0,1,0,1,0,0,0,0,0,0,1,2,0,0,1],
+        [1,0,0,0,1,1,1,1,0,1,0,0,0,1,4,1],
+        [1,1,0,1,0,0,0,0,0,1,0,1,0,0,3,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      ],
+      teacherPaths: [
+        [{x:1,y:1},{x:8,y:1},{x:8,y:4},{x:1,y:4}],
+        [{x:9,y:2},{x:14,y:2},{x:14,y:6},{x:9,y:6}],
+        [{x:1,y:8},{x:7,y:8},{x:7,y:13},{x:1,y:13}],
+        [{x:9,y:9},{x:13,y:9},{x:13,y:13},{x:9,y:13}],
+      ],
+      teacherSpeed: 0.032
+    },
+    { // 第3关 - 困难
+      map: [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,5,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+        [1,0,1,1,0,1,0,1,1,1,0,1,0,1,0,1],
+        [1,0,1,2,0,0,0,1,0,0,0,0,0,1,0,1],
+        [1,0,1,1,1,1,0,1,0,1,1,1,0,1,0,1],
+        [1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
+        [1,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1],
+        [1,0,0,0,0,1,2,0,0,1,0,0,0,0,0,1],
+        [1,0,1,1,1,1,0,1,0,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
+        [1,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1],
+        [1,2,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+        [1,0,0,1,1,1,0,1,1,1,1,1,0,1,0,1],
+        [1,0,1,0,0,0,0,1,2,0,0,0,0,0,4,1],
+        [1,0,0,0,1,0,1,1,0,1,1,0,1,0,3,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      ],
+      teacherPaths: [
+        [{x:1,y:1},{x:4,y:1},{x:4,y:5},{x:1,y:5}],
+        [{x:6,y:1},{x:10,y:1},{x:10,y:5},{x:6,y:5}],
+        [{x:12,y:1},{x:14,y:1},{x:14,y:5},{x:12,y:5}],
+        [{x:1,y:7},{x:4,y:7},{x:4,y:13},{x:1,y:13}],
+        [{x:9,y:7},{x:13,y:7},{x:13,y:13},{x:9,y:13}],
+      ],
+      teacherSpeed: 0.042
+    }
+  ];
+
+  // ============================================================
+  // 游戏状态变量
+  // ============================================================
+  let currentLevel = 0;
+  let lives = 3;
+  let keysCollected = 0;
+  let gameRunning = false;
+  let animId = null;
+  let invincible = false;    // 碰到老师后短暂无敌
+  let invincibleTimer = 0;
+
+  // 玩家状态
+  let player = { x: 0, y: 0, px: 0, py: 0, moving: false, progress: 0, dx: 0, dy: 0, blink: false };
+
+  // 老师列表
+  let teachers = [];
+
+  // 当前关卡地图（副本，可修改）
+  let map = [];
+
+  // 键盘状态
+  let keys = {};
+
+  // 粒子特效
+  let particles = [];
+
+  // ============================================================
+  // 获取DOM元素
+  // ============================================================
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const startScreen = document.getElementById('startScreen');
+  const overlayScreen = document.getElementById('overlayScreen');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayMsg = document.getElementById('overlayMsg');
+  const overlayBtn = document.getElementById('overlayBtn');
+  const hud = document.getElementById('hud');
+  const livesDisplay = document.getElementById('livesDisplay');
+  const keysDisplay = document.getElementById('keysDisplay');
+  const levelDisplay = document.getElementById('levelDisplay');
+
+  // ============================================================
+  // 按钮事件监听
+  // ============================================================
+  document.getElementById('startBtn').addEventListener('click', function() {
+    startScreen.style.display = 'none';
+    startGame(0);
+  });
+
+  overlayBtn.addEventListener('click', function() {
+    overlayScreen.style.display = 'none';
+    if (overlayBtn.dataset.action === 'restart') {
+      startGame(0);
+    } else if (overlayBtn.dataset.action === 'next') {
+      startGame(currentLevel);
+    } else if (overlayBtn.dataset.action === 'retry') {
+      startGame(currentLevel);
+    }
+  });
+
+  // 移动端方向键
+  document.getElementById('dUp').addEventListener('click', function(){ simulateKey('ArrowUp'); });
+  document.getElementById('dDown').addEventListener('click', function(){ simulateKey('ArrowDown'); });
+  document.getElementById('dLeft').addEventListener('click', function(){ simulateKey('ArrowLeft'); });
+  document.getElementById('dRight').addEventListener('click', function(){ simulateKey('ArrowRight'); });
+
+  function simulateKey(k) {
+    if (!gameRunning) return;
+    keys[k] = true;
+    setTimeout(function(){ keys[k] = false; }, 150);
   }
-  // initial clouds
-  for (let i = 0; i < 5; i++) {
-    clouds.push({
-      x: Math.random() * W,
-      y: 30 + Math.random() * (WATER_Y * 0.45),
-      w: 60 + Math.random() * 70,
-      h: 30 + Math.random() * 20,
-      speed: 0.4 + Math.random() * 0.5
+
+  // 键盘监听
+  document.addEventListener('keydown', function(e) {
+    keys[e.key] = true;
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  });
+  document.addEventListener('keyup', function(e) { keys[e.key] = false; });
+
+  // ============================================================
+  // 开始游戏
+  // ============================================================
+  function startGame(levelIdx) {
+    currentLevel = levelIdx;
+    keysCollected = 0;
+    if (levelIdx === 0) lives = 3;  // 只在第1关重置生命
+    invincible = false;
+    particles = [];
+    keys = {};
+
+    // 复制地图（深拷贝，避免修改原始数据）
+    map = levels[currentLevel].map.map(function(row){ return row.slice(); });
+
+    // 找出生点，放置玩家
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (map[r][c] === T.START) {
+          player.x = c; player.y = r;
+          player.px = c * TILE; player.py = r * TILE;
+          player.moving = false; player.progress = 0;
+        }
+      }
+    }
+
+    // 初始化老师
+    teachers = [];
+    const lvl = levels[currentLevel];
+    lvl.teacherPaths.forEach(function(path) {
+      teachers.push({
+        path: path,
+        pathIdx: 0,
+        progress: 0,
+        speed: lvl.teacherSpeed,
+        px: path[0].x * TILE,
+        py: path[0].y * TILE
+      });
+    });
+
+    // 显示画布和HUD
+    canvas.style.display = 'block';
+    hud.style.display = 'flex';
+    gameRunning = true;
+    updateHUD();
+
+    if (animId) cancelAnimationFrame(animId);
+    gameLoop();
+  }
+
+  // ============================================================
+  // 更新HUD
+  // ============================================================
+  function updateHUD() {
+    let hearts = '';
+    for (let i = 0; i < 3; i++) hearts += (i < lives) ? '❤️' : '🖤';
+    livesDisplay.textContent = hearts;
+    keysDisplay.textContent = keysCollected + '/5';
+    levelDisplay.textContent = (currentLevel + 1);
+  }
+
+  // ============================================================
+  // 游戏主循环
+  // ============================================================
+  function gameLoop() {
+    if (!gameRunning) return;
+    update();
+    render();
+    animId = requestAnimationFrame(gameLoop);
+  }
+
+  // ============================================================
+  // 更新逻辑
+  // ============================================================
+  function update() {
+    // 无敌计时
+    if (invincible) {
+      invincibleTimer--;
+      player.blink = (invincibleTimer % 8 < 4);
+      if (invincibleTimer <= 0) { invincible = false; player.blink = false; }
+    }
+
+    // 玩家移动（格子式移动）
+    if (!player.moving) {
+      let dx = 0, dy = 0;
+      if (keys['ArrowUp'])    dy = -1;
+      else if (keys['ArrowDown'])  dy = 1;
+      else if (keys['ArrowLeft'])  dx = -1;
+      else if (keys['ArrowRight']) dx = 1;
+
+      if (dx !== 0 || dy !== 0) {
+        let nx = player.x + dx, ny = player.y + dy;
+        if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS) {
+          let tile = map[ny][nx];
+          // 门格子只有收集满5把钥匙才能走
+          if (tile === T.DOOR && keysCollected < 5) {
+            // 不能通过
+          } else if (tile !== T.WALL) {
+            player.moving = true;
+            player.dx = dx; player.dy = dy;
+            player.progress = 0;
+            player.x = nx; player.y = ny;
+          }
+        }
+      }
+    }
+
+    // 平滑移动
+    if (player.moving) {
+      player.progress += 0.2;
+      if (player.progress >= 1) {
+        player.progress = 1;
+        player.moving = false;
+        player.px = player.x * TILE;
+        player.py = player.y * TILE;
+        onPlayerArrived();
+      } else {
+        player.px = (player.x - player.dx) * TILE + player.dx * TILE * player.progress;
+        player.py = (player.y - player.dy) * TILE + player.dy * TILE * player.progress;
+      }
+    }
+
+    // 更新老师位置
+    teachers.forEach(function(t) {
+      let from = t.path[t.pathIdx];
+      let to = t.path[(t.pathIdx + 1) % t.path.length];
+      t.progress += t.speed;
+      if (t.progress >= 1) {
+        t.progress = 0;
+        t.pathIdx = (t.pathIdx + 1) % t.path.length;
+        from = t.path[t.pathIdx];
+        to = t.path[(t.pathIdx + 1) % t.path.length];
+      }
+      t.px = from.x * TILE + (to.x - from.x) * TILE * t.progress;
+      t.py = from.y * TILE + (to.y - from.y) * TILE * t.progress;
+
+      // 碰撞检测（像素距离）
+      if (!invincible) {
+        let dist = Math.hypot(t.px - player.px, t.py - player.py);
+        if (dist < TILE * 0.75) {
+          hitByTeacher();
+        }
+      }
+    });
+
+    // 更新粒子
+    particles = particles.filter(function(p) {
+      p.x += p.vx; p.y += p.vy;
+      p.life--; p.vy += 0.15;
+      return p.life > 0;
     });
   }
 
-  // ─── Birds (obstacles in sky) ───────────────────────────
-  const birds = [];
-  function spawnBird() {
-    const fromLeft = Math.random() < 0.5;
-    birds.push({
-      x: fromLeft ? -40 : W + 40,
-      y: 40 + Math.random() * (WATER_Y * 0.6),
-      dir: fromLeft ? 1 : -1,
-      speed: 1.2 + Math.random() * 1.5 + level * 0.2,
-      wingFrame: 0
-    });
+  // ============================================================
+  // 玩家到达新格子后的事件
+  // ============================================================
+  function onPlayerArrived() {
+    let tile = map[player.y][player.x];
+    // 捡钥匙
+    if (tile === T.KEY) {
+      map[player.y][player.x] = T.FLOOR;
+      keysCollected++;
+      updateHUD();
+      spawnParticles(player.px + TILE/2, player.py + TILE/2, '#FFD700', 18);
+      if (keysCollected === 5) {
+        spawnParticles(player.px + TILE/2, player.py + TILE/2, '#FF6B6B', 30);
+      }
+    }
+    // 到达终点门
+    if (tile === T.DOOR && keysCollected >= 5) {
+      levelComplete();
+    }
   }
 
-  // ─── Fish ────────────────────────────────────────────────
-  const fishes = [];
-  function spawnFish() {
-    fishes.push({
-      x: Math.random() * (W - 60) + 30,
-      y: WATER_Y + 30 + Math.random() * (H - WATER_Y - 80),
-      dir: Math.random() < 0.5 ? 1 : -1,
-      speed: 0.5 + Math.random() * 0.8,
-      size: 18 + Math.random() * 14,
-      type: Math.floor(Math.random() * 3), // 0=normal,1=gold,2=blue
-      wiggle: Math.random() * Math.PI * 2
-    });
+  // ============================================================
+  // 被老师碰到
+  // ============================================================
+  function hitByTeacher() {
+    lives--;
+    invincible = true;
+    invincibleTimer = 90;
+    updateHUD();
+    spawnParticles(player.px + TILE/2, player.py + TILE/2, '#e94560', 20);
+
+    if (lives <= 0) {
+      gameRunning = false;
+      setTimeout(function() {
+        overlayTitle.textContent = '💀 游戏结束';
+        overlayMsg.innerHTML = '被老师抓到太多次了！<br>别担心，再试一次！😊';
+        overlayBtn.textContent = '🔄 重新开始';
+        overlayBtn.dataset.action = 'restart';
+        overlayScreen.style.display = 'flex';
+      }, 500);
+    }
   }
 
-  // ─── Seaweeds ────────────────────────────────────────────
-  const seaweeds = [];
-  function initSeaweeds() {
-    seaweeds.length = 0;
-    for (let i = 0; i < 7; i++) {
-      seaweeds.push({
-        x: Math.random() * (W - 40) + 20,
-        h: 30 + Math.random() * 50,
-        sway: Math.random() * Math.PI * 2,
-        segments: 3 + Math.floor(Math.random() * 3)
+  // ============================================================
+  // 关卡完成
+  // ============================================================
+  function levelComplete() {
+    gameRunning = false;
+    spawnParticles(player.px + TILE/2, player.py + TILE/2, '#00FF88', 40);
+    render(); // 最后渲染一帧
+    setTimeout(function() {
+      if (currentLevel < levels.length - 1) {
+        currentLevel++;
+        overlayTitle.textContent = '🎉 过关！';
+        overlayMsg.innerHTML = '太棒了！找到了所有钥匙，<br>图书馆的门打开啦！📚<br><br>准备好挑战第 ' + (currentLevel + 1) + ' 关了吗？';
+        overlayBtn.textContent = '➡️ 下一关';
+        overlayBtn.dataset.action = 'next';
+        overlayScreen.style.display = 'flex';
+      } else {
+        overlayTitle.textContent = '🏆 全部通关！';
+        overlayMsg.innerHTML = '恭喜你！！！<br>你通过了全部3关校园迷宫！<br>你真是个了不起的小探险家！🌟🌟🌟';
+        overlayBtn.textContent = '🔄 再玩一次';
+        overlayBtn.dataset.action = 'restart';
+        overlayScreen.style.display = 'flex';
+      }
+    }, 600);
+  }
+
+  // ============================================================
+  // 粒子生成
+  // ============================================================
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      let angle = Math.random() * Math.PI * 2;
+      let speed = Math.random() * 3 + 1;
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2,
+        color: color, life: 40 + Math.random() * 20,
+        size: 3 + Math.random() * 4
       });
     }
   }
 
-  // ─── Crocodiles ──────────────────────────────────────────
-  const crocs = [];
-  function spawnCroc() {
-    const fromLeft = Math.random() < 0.5;
-    crocs.push({
-      x: fromLeft ? -80 : W + 80,
-      y: WATER_Y - 12 + Math.random() * 20,
-      dir: fromLeft ? 1 : -1,
-      speed: 0.6 + Math.random() * 0.5 + level * 0.15,
-      mouthOpen: 0,
-      mouthDir: 1,
-      snapCooldown: 0
+  // ============================================================
+  // 渲染函数
+  // ============================================================
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 背景
+    ctx.fillStyle = '#e8f4e8';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 渲染地图格子
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        let x = c * TILE, y = r * TILE;
+        let tile = map[r][c];
+        drawTile(ctx, tile, x, y, c, r);
+      }
+    }
+
+    // 渲染粒子
+    particles.forEach(function(p) {
+      ctx.globalAlpha = p.life / 60;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
     });
+    ctx.globalAlpha = 1;
+
+    // 渲染老师
+    teachers.forEach(function(t) { drawTeacher(ctx, t); });
+
+    // 渲染玩家
+    if (!player.blink) drawPlayer(ctx, player);
+
+    // 如果收集满5钥匙，给终点门加光晕
+    if (keysCollected >= 5) drawDoorGlow();
   }
 
-  // ─── Bubbles ─────────────────────────────────────────────
-  const bubbles = [];
-  function spawnBubble() {
-    bubbles.push({
-      x: Math.random() * W,
-      y: H,
-      r: 2 + Math.random() * 4,
-      speed: 0.4 + Math.random() * 0.6
-    });
-  }
+  // ============================================================
+  // 绘制地图格子
+  // ============================================================
+  function drawTile(ctx, tile, x, y, c, r) {
+    if (tile === T.WALL) {
+      // 墙壁 - 蓝色砖块
+      ctx.fillStyle = '#3a7bd5';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#2e63b8';
+      ctx.fillRect(x+2, y+2, TILE-4, TILE-4);
+      // 砖缝
+      ctx.strokeStyle = '#2255a0';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x+2, y+2, TILE-4, TILE-4);
+      // 高光
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(x+3, y+3, TILE-6, 4);
 
-  // ─── Score Popups ────────────────────────────────────────
-  const popups = [];
-  function addPopup(x, y, text, color) {
-    popups.push({ x, y, text, color, life: 60 });
-  }
+    } else if (tile === T.FLOOR || tile === T.START) {
+      // 地板 - 棋盘格
+      ctx.fillStyle = ((c + r) % 2 === 0) ? '#f0faf0' : '#e0f0e0';
+      ctx.fillRect(x, y, TILE, TILE);
 
-  // ─── Mouse / Touch Control ───────────────────────────────
-  const container = document.getElementById('gameContainer');
-  function getRelPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    if (e.touches) {
-      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  }
-  canvas.addEventListener('mousemove', function(e) {
-    if (!gameRunning) return;
-    const p = getRelPos(e);
-    eagle.targetX = p.x;
-    // eagle can only be controlled above water unless diving
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.targetY = Math.min(p.y, WATER_Y - 30);
-    }
-  });
-  canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    if (!gameRunning) return;
-    const p = getRelPos(e);
-    eagle.targetX = p.x;
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.targetY = Math.min(p.y, WATER_Y - 30);
-    }
-  }, { passive: false });
-  // Click/tap to dive
-  canvas.addEventListener('click', function(e) {
-    if (!gameRunning) return;
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.diving = true;
-      eagle.diveStartY = eagle.y;
-      eagle.vy = 8;
-    }
-  });
-  canvas.addEventListener('touchend', function(e) {
-    if (!gameRunning) return;
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.diving = true;
-      eagle.diveStartY = eagle.y;
-      eagle.vy = 8;
-    }
-  });
+    } else if (tile === T.KEY) {
+      // 地板 + 钥匙
+      ctx.fillStyle = ((c + r) % 2 === 0) ? '#f0faf0' : '#e0f0e0';
+      ctx.fillRect(x, y, TILE, TILE);
+      drawKey(ctx, x + TILE/2, y + TILE/2);
 
-  // ─── Drawing Helpers ─────────────────────────────────────
-  // Draw a cloud
-  function drawCloud(x, y, w, h) {
-    ctx.fillStyle = 'rgba(255,255,255,0.88)';
-    ctx.beginPath();
-    ctx.ellipse(x, y, w * 0.45, h * 0.5, 0, 0, Math.PI * 2);
-    ctx.ellipse(x - w * 0.25, y + h * 0.1, w * 0.28, h * 0.38, 0, 0, Math.PI * 2);
-    ctx.ellipse(x + w * 0.25, y + h * 0.1, w * 0.28, h * 0.38, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Draw a small bird
-  function drawBird(x, y, dir, wingFrame) {
-    ctx.save();
-    ctx.translate(x, y);
-    if (dir < 0) ctx.scale(-1, 1);
-    // body
-    ctx.fillStyle = '#555';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // wings
-    const wf = Math.sin(wingFrame * 0.3) * 6;
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-8, -2);
-    ctx.quadraticCurveTo(-14, -8 + wf, -18, -2 + wf);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(2, -2);
-    ctx.quadraticCurveTo(8, -8 + wf, 12, -2 + wf);
-    ctx.stroke();
-    // head
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(11, -2, 5, 0, Math.PI * 2);
-    ctx.fill();
-    // beak
-    ctx.fillStyle = '#f5a623';
-    ctx.beginPath();
-    ctx.moveTo(15, -1);
-    ctx.lineTo(19, -2);
-    ctx.lineTo(15, 0);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // Draw eagle
-  function drawEagle(x, y, diving, inWater, inv) {
-    if (inv > 0 && Math.floor(inv / 5) % 2 === 0) return; // blink when invincible
-    ctx.save();
-    ctx.translate(x, y);
-    if (diving || inWater) ctx.rotate(Math.PI / 2); // point downward
-    // body
-    ctx.fillStyle = '#8B4513';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // wings
-    const wSpread = (diving || inWater) ? 18 : 22;
-    ctx.fillStyle = '#6d2f00';
-    // left wing
-    ctx.beginPath();
-    ctx.moveTo(-8, -2);
-    ctx.bezierCurveTo(-20, -wSpread, -32, -wSpread + 5, -26, -2);
-    ctx.closePath();
-    ctx.fill();
-    // right wing
-    ctx.beginPath();
-    ctx.moveTo(-8, 2);
-    ctx.bezierCurveTo(-20, wSpread, -32, wSpread - 5, -26, 2);
-    ctx.closePath();
-    ctx.fill();
-    // tail feathers
-    ctx.fillStyle = '#5a2000';
-    ctx.beginPath();
-    ctx.moveTo(18, -5);
-    ctx.lineTo(28, -8);
-    ctx.lineTo(27, 0);
-    ctx.lineTo(28, 8);
-    ctx.lineTo(18, 5);
-    ctx.closePath();
-    ctx.fill();
-    // white head
-    ctx.fillStyle = '#f0f0f0';
-    ctx.beginPath();
-    ctx.ellipse(-16, 0, 10, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // eye
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(-19, -2, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(-18.5, -2.5, 0.8, 0, Math.PI * 2);
-    ctx.fill();
-    // beak
-    ctx.fillStyle = '#f5c518';
-    ctx.beginPath();
-    ctx.moveTo(-24, -1);
-    ctx.lineTo(-30, 1);
-    ctx.lineTo(-24, 3);
-    ctx.closePath();
-    ctx.fill();
-    // claws (when diving)
-    if (diving || inWater) {
-      ctx.strokeStyle = '#333';
+    } else if (tile === T.DOOR) {
+      // 终点门 - 图书馆大门
+      ctx.fillStyle = '#8B4513';
+      ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#A0522D';
+      ctx.fillRect(x+3, y+3, TILE-6, TILE-6);
+      // 门板纹理
+      ctx.fillStyle = '#6B3410';
+      ctx.fillRect(x+8, y+5, 4, 30);
+      ctx.fillRect(x+20, y+5, 4, 30);
+      // 门环
+      ctx.strokeStyle = '#FFD700';
       ctx.lineWidth = 2;
-      [-5, 0, 5].forEach(offset => {
-        ctx.beginPath();
-        ctx.moveTo(-16 + offset, 10);
-        ctx.lineTo(-16 + offset, 17);
-        ctx.stroke();
-      });
+      ctx.beginPath();
+      ctx.arc(x+TILE/2, y+TILE*0.55, 5, 0, Math.PI*2);
+      ctx.stroke();
+      // 📚 字
+      ctx.font = '10px Arial';
+      ctx.fillStyle = '#FFD700';
+      ctx.textAlign = 'center';
+      ctx.fillText('图书馆', x+TILE/2, y+12);
+
+    } else if (tile === T.SIGN) {
+      // 提示牌
+      ctx.fillStyle = ((c + r) % 2 === 0) ? '#f0faf0' : '#e0f0e0';
+      ctx.fillRect(x, y, TILE, TILE);
+      // 牌子
+      ctx.fillStyle = '#F4A460';
+      ctx.fillRect(x+6, y+8, 28, 20);
+      ctx.strokeStyle = '#8B6914';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x+6, y+8, 28, 20);
+      // 柱子
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(x+18, y+28, 4, 10);
+      // 文字
+      ctx.font = '9px Arial';
+      ctx.fillStyle = '#333';
+      ctx.textAlign = 'center';
+      ctx.fillText('提示', x+TILE/2, y+21);
     }
-    ctx.restore();
   }
 
-  // Draw fish
-  function drawFish(x, y, dir, size, type, wiggle) {
-    const colors = [
-      ['#ff8c00','#ff4500'], // orange
-      ['#ffd700','#ffa500'], // gold
-      ['#00bcd4','#0097a7']  // blue
-    ];
+  // ============================================================
+  // 绘制钥匙
+  // ============================================================
+  function drawKey(ctx, cx, cy) {
+    let t = Date.now() / 500;
+    let bobY = Math.sin(t) * 3;
+    cy += bobY;
+
     ctx.save();
-    ctx.translate(x, y);
-    if (dir > 0) ctx.scale(-1, 1);
-    const wag = Math.sin(wiggle) * 4;
-    // tail
-    ctx.fillStyle = colors[type][1];
+    // 钥匙头
     ctx.beginPath();
-    ctx.moveTo(size * 0.6, wag);
-    ctx.lineTo(size * 1.2, -size * 0.45 + wag);
-    ctx.lineTo(size * 1.2, size * 0.45 + wag);
-    ctx.closePath();
+    ctx.arc(cx - 6, cy, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFD700';
     ctx.fill();
-    // body
-    ctx.fillStyle = colors[type][0];
-    ctx.beginPath();
-    ctx.ellipse(0, 0, size * 0.55, size * 0.3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // eye
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(-size * 0.28, -size * 0.05, size * 0.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(-size * 0.3, -size * 0.05, size * 0.06, 0, Math.PI * 2);
-    ctx.fill();
-    // fin
-    ctx.fillStyle = colors[type][1];
-    ctx.beginPath();
-    ctx.moveTo(-size * 0.1, -size * 0.25);
-    ctx.lineTo(size * 0.2, -size * 0.25);
-    ctx.lineTo(size * 0.15, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // Draw seaweed
-  function drawSeaweed(x, sway, segments, h) {
-    const baseY = H;
-    const segH = h / segments;
-    ctx.strokeStyle = '#2e7d32';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, baseY);
-    for (let i = 0; i < segments; i++) {
-      const cy = baseY - (i + 0.5) * segH;
-      const bx = x + Math.sin(sway + i * 1.2) * 10;
-      ctx.lineTo(bx, cy);
-    }
+    ctx.strokeStyle = '#B8860B';
+    ctx.lineWidth = 2;
     ctx.stroke();
-    // leaf blobs
-    ctx.fillStyle = '#388e3c';
-    for (let i = 0; i < segments; i++) {
-      const ly = baseY - i * segH - segH * 0.8;
-      const lx = x + Math.sin(sway + i * 1.2) * 10;
-      ctx.beginPath();
-      ctx.ellipse(lx + 7, ly, 7, 4, 0.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(lx - 7, ly - 4, 6, 3, -0.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  // Draw crocodile
-  function drawCroc(x, y, dir, mouthOpen) {
-    ctx.save();
-    ctx.translate(x, y);
-    if (dir < 0) ctx.scale(-1, 1);
-    // body
-    ctx.fillStyle = '#33691e';
+    // 钥匙孔
     ctx.beginPath();
-    ctx.ellipse(0, 2, 38, 12, 0, 0, Math.PI * 2);
+    ctx.arc(cx - 6, cy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#B8860B';
     ctx.fill();
-    // bumps on back
-    ctx.fillStyle = '#558b2f';
-    for (let i = -20; i <= 20; i += 10) {
-      ctx.beginPath();
-      ctx.ellipse(i, -8, 5, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // tail
-    ctx.fillStyle = '#33691e';
+    // 钥匙柄
     ctx.beginPath();
-    ctx.moveTo(32, 0);
-    ctx.lineTo(52, -6);
-    ctx.lineTo(48, 6);
-    ctx.closePath();
-    ctx.fill();
-    // lower jaw (static)
-    ctx.fillStyle = '#4caf50';
-    ctx.beginPath();
-    ctx.moveTo(-38, 2);
-    ctx.lineTo(-18, 2);
-    ctx.lineTo(-10, 14);
-    ctx.lineTo(-40, 10);
-    ctx.closePath();
-    ctx.fill();
-    // upper jaw (opens)
-    ctx.save();
-    ctx.translate(-28, 0);
-    ctx.rotate(-mouthOpen * 0.4);
-    ctx.fillStyle = '#66bb6a';
-    ctx.beginPath();
-    ctx.moveTo(-10, 0);
-    ctx.lineTo(10, 0);
-    ctx.lineTo(2, -12);
-    ctx.lineTo(-12, -10);
-    ctx.closePath();
-    ctx.fill();
-    // teeth
-    ctx.fillStyle = '#fff';
-    for (let t = -8; t <= 8; t += 5) {
-      ctx.beginPath();
-      ctx.moveTo(t, 0);
-      ctx.lineTo(t + 2, -5);
-      ctx.lineTo(t + 4, 0);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-    // eye
-    ctx.fillStyle = '#ffeb3b';
-    ctx.beginPath();
-    ctx.ellipse(-15, -10, 6, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#1a237e';
-    ctx.beginPath();
-    ctx.arc(-15, -10, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // ─── Draw Background ─────────────────────────────────────
-  function drawBackground(t) {
-    // Sky gradient
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, WATER_Y);
-    skyGrad.addColorStop(0, '#63b3ed');
-    skyGrad.addColorStop(1, '#90cdf4');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, W, WATER_Y);
-
-    // Sun
-    ctx.save();
-    ctx.shadowColor = 'rgba(255,220,50,0.6)';
-    ctx.shadowBlur = 30;
-    ctx.fillStyle = '#ffe066';
-    ctx.beginPath();
-    ctx.arc(W - 60, 50, 26, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Clouds
-    clouds.forEach(c => drawCloud(c.x, c.y, c.w, c.h));
-
-    // Water body gradient
-    const waterGrad = ctx.createLinearGradient(0, WATER_Y, 0, H);
-    waterGrad.addColorStop(0, '#1565c0');
-    waterGrad.addColorStop(0.3, '#1976d2');
-    waterGrad.addColorStop(1, '#0d47a1');
-    ctx.fillStyle = waterGrad;
-    ctx.fillRect(0, WATER_Y, W, H - WATER_Y);
-
-    // Water surface wave
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.moveTo(cx - 1, cy);
+    ctx.lineTo(cx + 10, cy);
+    ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    for (let wx = 0; wx <= W; wx += 4) {
-      const wy = WATER_Y + Math.sin((wx * 0.03) + t * 0.04) * 5 + Math.sin((wx * 0.07) + t * 0.06) * 3;
-      wx === 0 ? ctx.moveTo(wx, wy) : ctx.lineTo(wx, wy);
-    }
     ctx.stroke();
+    // 钥匙齿
+    ctx.fillStyle = '#FFD700';
+    ctx.fillRect(cx+4, cy, 3, 5);
+    ctx.fillRect(cx+8, cy, 3, 4);
+    ctx.restore();
 
-    // Subtle light rays in water
+    // 闪光
     ctx.save();
-    ctx.globalAlpha = 0.06;
-    ctx.fillStyle = '#90caf9';
-    for (let r = 0; r < 5; r++) {
-      const rx = 60 + r * 90 + Math.sin(t * 0.015 + r) * 20;
-      ctx.beginPath();
-      ctx.moveTo(rx, WATER_Y);
-      ctx.lineTo(rx - 30, H);
-      ctx.lineTo(rx + 30, H);
-      ctx.closePath();
+    ctx.globalAlpha = 0.6 + Math.sin(t*2)*0.3;
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('✨', cx+4, cy-10);
+    ctx.restore();
+  }
+
+  // ============================================================
+  // 绘制玩家（小同学）
+  // ============================================================
+  function drawPlayer(ctx, p) {
+    let x = p.px + TILE/2, y = p.py + TILE/2;
+    let leg = p.moving ? Math.sin(Date.now()/80)*4 : 0;
+
+    ctx.save();
+    // 身体
+    ctx.fillStyle = '#4FC3F7'; // 浅蓝色校服
+    ctx.beginPath();
+    ctx.roundRect(x-9, y-2, 18, 14, 4);
+    ctx.fill();
+    // 头
+    ctx.fillStyle = '#FFCC80'; // 肤色
+    ctx.beginPath();
+    ctx.arc(x, y-10, 11, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#E6AA6A';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 头发
+    ctx.fillStyle = '#5D4037';
+    ctx.beginPath();
+    ctx.arc(x, y-13, 9, Math.PI, 2*Math.PI);
+    ctx.fill();
+    // 眼睛
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x-5, y-11, 3, 3);
+    ctx.fillRect(x+2, y-11, 3, 3);
+    // 笑脸
+    ctx.strokeStyle = '#c06040';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y-8, 4, 0.2, Math.PI-0.2);
+    ctx.stroke();
+    // 腿
+    ctx.fillStyle = '#1565C0';
+    ctx.fillRect(x-7, y+12+leg, 5, 8);
+    ctx.fillRect(x+2, y+12-leg, 5, 8);
+    // 书包
+    ctx.fillStyle = '#FF7043';
+    ctx.beginPath();
+    ctx.roundRect(x+8, y-8, 8, 14, 3);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ============================================================
+  // 绘制老师
+  // ============================================================
+  function drawTeacher(ctx, t) {
+    let x = t.px + TILE/2, y = t.py + TILE/2;
+    let bob = Math.sin(Date.now()/120)*2;
+
+    ctx.save();
+    // 警示光圈
+    ctx.globalAlpha = 0.18 + Math.sin(Date.now()/200)*0.08;
+    ctx.fillStyle = '#e94560';
+    ctx.beginPath();
+    ctx.arc(x, y, TILE*0.8, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // 身体 - 深色西装
+    ctx.fillStyle = '#37474F';
+    ctx.beginPath();
+    ctx.roundRect(x-10, y-2+bob, 20, 16, 4);
+    ctx.fill();
+    // 领带
+    ctx.fillStyle = '#e94560';
+    ctx.beginPath();
+    ctx.moveTo(x, y-2+bob);
+    ctx.lineTo(x-3, y+8+bob);
+    ctx.lineTo(x, y+10+bob);
+    ctx.lineTo(x+3, y+8+bob);
+    ctx.closePath();
+    ctx.fill();
+    // 头
+    ctx.fillStyle = '#FFCC80';
+    ctx.beginPath();
+    ctx.arc(x, y-10+bob, 11, 0, Math.PI*2);
+    ctx.fill();
+    // 眼镜
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(x-4, y-10+bob, 4, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x+4, y-10+bob, 4, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.moveTo(x-8, y-10+bob);
+    ctx.lineTo(x-15, y-10+bob);
+    ctx.moveTo(x+8, y-10+bob);
+    ctx.lineTo(x+15, y-10+bob);
+    ctx.stroke();
+    // 眼睛（怒视）
+    ctx.fillStyle = '#333';
+    ctx.fillRect(x-6, y-12+bob, 4, 2);
+    ctx.fillRect(x+2, y-12+bob, 4, 2);
+    // 头发/秃顶
+    ctx.fillStyle = '#5D4037';
+    ctx.beginPath();
+    ctx.arc(x, y-15+bob, 8, Math.PI, 2*Math.PI);
+    ctx.fill();
+    ctx.fillRect(x-8, y-18+bob, 16, 5);
+    // 腿
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(x-7, y+14+bob, 5, 8);
+    ctx.fillRect(x+2, y+14+bob, 5, 8);
+    ctx.restore();
+  }
+
+  // ============================================================
+  // 终点门发光特效
+  // ============================================================
+  function drawDoorGlow() {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (map[r][c] === T.DOOR) {
+          let x = c * TILE + TILE/2, y = r * TILE + TILE/2;
+          let glow = 0.4 + Math.sin(Date.now()/200)*0.3;
+          ctx.save();
+          ctx.globalAlpha = glow;
+          let grad = ctx.createRadialGradient(x,y,5,x,y,TILE);
+          grad.addColorStop(0, '#FFD700');
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.fillRect(c*TILE-TILE/2, r*TILE-TILE/2, TILE*2, TILE*2);
+          ctx.globalAlpha = 1;
+          ctx.font = '14px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('🔓', x, r*TILE - 4);
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  // ============================================================
+  // 初始化时画一帧起始画面
+  // ============================================================
+  // 画布先隐藏，什么都不做，等玩家点击开始
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
