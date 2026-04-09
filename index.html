@@ -25,25 +25,25 @@
   }
   .hud-item { color: #fff; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.4); }
 
-  /* 游戏容器：canvas和弹窗都放这里面 */
+  /* 游戏容器 */
   #gameContainer {
     position: relative;
     width: 680px;
     height: 520px;
   }
 
-  /* canvas默认隐藏，游戏开始后才显示，z-index低于弹窗 */
+  /* canvas默认隐藏，游戏开始后才显示 */
   #canvas {
     position: absolute;
     top: 0; left: 0;
     border: 4px solid #fff;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    display: none; /* 游戏开始前隐藏 */
-    z-index: 1; /* 低于开始界面 */
+    display: none;
+    z-index: 1;
   }
 
-  /* 消息弹窗：覆盖在canvas上方，z-index高 */
+  /* 消息弹窗覆盖层 */
   #message {
     position: absolute;
     top: 0; left: 0;
@@ -51,8 +51,8 @@
     background: rgba(0,0,0,0.7);
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    z-index: 100; /* 高于canvas，按钮一定可以点击 */
-    pointer-events: auto; /* 确保可以接收点击 */
+    z-index: 100;
+    pointer-events: auto;
     border-radius: 12px;
   }
   #messageBox {
@@ -62,16 +62,18 @@
   }
   #messageTitle { font-size: 36px; margin-bottom: 12px; }
   #messageText { font-size: 16px; color: #555; margin-bottom: 24px; line-height: 1.6; }
-  #messageBtn {
+
+  /* 弹窗按钮样式 — 注意：按钮在HTML里用class命名，不用id=messageBtn */
+  .msg-btn {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: #fff; border: none; padding: 14px 40px; border-radius: 30px;
     font-size: 18px; font-weight: bold; cursor: pointer;
     box-shadow: 0 4px 15px rgba(102,126,234,0.5); transition: transform 0.1s;
-    pointer-events: auto; /* 确保按钮可点击 */
+    pointer-events: auto;
     position: relative;
     z-index: 101;
   }
-  #messageBtn:hover { transform: scale(1.05); }
+  .msg-btn:hover { transform: scale(1.05); }
 
   #controls {
     color: rgba(255,255,255,0.8); font-size: 13px; margin-top: 8px;
@@ -118,7 +120,12 @@
   <!-- canvas：z-index=1，游戏开始前隐藏 -->
   <canvas id="canvas"></canvas>
 
-  <!-- 开始/消息弹窗：z-index=100，始终在canvas上方 -->
+  <!-- 
+    开始/消息弹窗：z-index=100
+    注意：弹窗内的按钮由JavaScript动态创建并插入，
+    不在HTML里预置任何id=messageBtn的按钮，
+    避免隐藏按钮拦截点击事件！
+  -->
   <div id="message">
     <div id="messageBox">
       <div id="messageTitle">🏫 校园迷宫</div>
@@ -127,7 +134,7 @@
         然后到 <b>图书馆大门📚</b> 通关！<br>
         小心巡逻老师👨‍🏫，碰到扣1条命！
       </div>
-      <button id="messageBtn">开始冒险！</button>
+      <!-- 按钮由JS动态插入到这里，不预置按钮 -->
     </div>
   </div>
 
@@ -157,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
   const messageDiv = document.getElementById('message');
-  const messageBtn = document.getElementById('messageBtn');
+  const messageBox = document.getElementById('messageBox');
   const messageTitleEl = document.getElementById('messageTitle');
   const messageTextEl = document.getElementById('messageText');
 
@@ -269,9 +276,6 @@ document.addEventListener('DOMContentLoaded', function() {
   let frameCount = 0;
   const keys = {};
 
-  // 按钮回调：每次显示弹窗时动态设置
-  let btnCallback = null;
-
   // ===== 颜色主题 =====
   const COLORS = {
     floor: ['#FFF9E6','#FFF3CC'],
@@ -286,41 +290,50 @@ document.addEventListener('DOMContentLoaded', function() {
     teacher: '#D63031',
   };
 
-  // ===== 显示/隐藏弹窗 =====
-  // 游戏开始时：隐藏弹窗，显示canvas
-  function startGame() {
-    messageDiv.style.display = 'none'; // 隐藏弹窗
-    canvas.style.display = 'block';    // 显示canvas
-  }
+  // ===== 弹窗管理：动态创建按钮，避免预置按钮拦截点击 =====
 
-  // 显示弹窗（游戏中途暂停用）
+  // 显示弹窗，动态插入一个全新按钮
   function showMessage(title, text, btnText, callback) {
     messageTitleEl.textContent = title;
     messageTextEl.innerHTML = text;
-    messageBtn.textContent = btnText;
-    btnCallback = callback;
-    messageDiv.style.display = 'flex'; // 显示弹窗覆盖canvas
+
+    // 移除旧按钮（如果存在），防止重复绑定事件
+    const oldBtn = messageBox.querySelector('.msg-btn');
+    if (oldBtn) { messageBox.removeChild(oldBtn); }
+
+    // 创建全新按钮并绑定事件
+    const btn = document.createElement('button');
+    btn.className = 'msg-btn';
+    btn.textContent = btnText;
+    btn.addEventListener('click', function() {
+      // 先移除按钮并隐藏弹窗
+      messageBox.removeChild(btn);
+      messageDiv.style.display = 'none';
+      canvas.style.display = 'block';
+      // 再执行回调
+      if (callback) { callback(); }
+    });
+    messageBox.appendChild(btn);
+
+    // 显示弹窗
+    messageDiv.style.display = 'flex';
   }
 
-  // ===== 绑定开始按钮（唯一入口）=====
-  // 使用addEventListener，不用onclick属性
-  messageBtn.addEventListener('click', function() {
-    if (btnCallback) {
-      // 游戏中途弹窗（过关、死亡等）
-      var cb = btnCallback;
-      btnCallback = null;
-      startGame(); // 先显示canvas隐藏弹窗
-      cb();        // 再执行回调（初始化关卡、设置gameRunning=true）
-    } else {
-      // 第一次开始游戏
-      startGame();
+  // ===== 显示开始界面（首次）=====
+  // 直接调用showMessage显示初始弹窗，统一入口
+  showMessage(
+    '🏫 校园迷宫',
+    '在校园迷宫中找到 <b>5把钥匙🔑</b>，<br>然后到 <b>图书馆大门📚</b> 通关！<br>小心巡逻老师👨‍🏫，碰到扣1条命！',
+    '开始冒险！',
+    function() {
+      // 开始游戏
       currentLevel = 0;
       lives = 3;
       initLevel(0);
       gameRunning = true;
       requestAnimationFrame(gameLoop);
     }
-  });
+  );
 
   // ===== 初始化关卡 =====
   function initLevel(levelIdx) {
@@ -532,12 +545,4 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.translate(x, y);
     // 阴影
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.beginPath(); ctx.ellipse(0, 14, 10, 4, 0, 0, Math.PI*2); ctx.fill();
-    // 身体
-    ctx.fillStyle = '#0984E3';
-    ctx.beginPath(); ctx.roundRect(-10, -4, 20, 16, 4); ctx.fill();
-    // 书包
-    ctx.fillStyle = '#FDCB6E';
-    ctx.beginPath(); ctx.roundRect(7, -2, 6, 12, 2); ctx.fill();
-    // 头
-    ctx.
+    ctx.beginPath(); ctx.ellipse(0, 14, 10, 4, 0, 0, Math.PI*2); ctx.fill
