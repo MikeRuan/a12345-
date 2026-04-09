@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cat & Rat Catcher!</title>
+  <style>
+    /* === GLOBAL STYLES === */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    /* === TITLE === */
+    h1 {
+      color: #ffd700;
+      font-size: 2rem;
+      text-shadow: 0 0 20px #ff6b35, 2px 2px 0 #c0392b;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+
+    /* === SCOREBOARD === */
+    #scoreboard {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 10px;
+    }
+
+    .score-box {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid #ffd700;
+      border-radius: 12px;
+      padding: 6px 18px;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    .score-box span {
+      color: #ffd700;
+    }
+
+    /* === GAME CANVAS === */
+    #gameCanvas {
+      border: 4px solid #ffd700;
+      border-radius: 16px;
+      box-shadow: 0 0 40px rgba(255, 215, 0, 0.4), 0 0 80px rgba(255, 107, 53, 0.2);
+      background: #1a1a1a;
+      display: block;
+      cursor: none;
+    }
+
+    /* === BUTTONS === */
+    #startBtn {
+      margin-top: 14px;
+      padding: 12px 36px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      background: linear-gradient(135deg, #ffd700, #ff6b35);
+      color: #1a1a2e;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255,215,0,0.4);
+      transition: transform 0.1s, box-shadow 0.1s;
+      letter-spacing: 1px;
+    }
+
+    #startBtn:hover {
+      transform: scale(1.07);
+      box-shadow: 0 6px 28px rgba(255,215,0,0.6);
+    }
+
+    /* === MOBILE CONTROLS === */
+    #mobileControls {
+      display: none;
+      margin-top: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .ctrl-btn {
+      width: 60px;
+      height: 60px;
+      font-size: 1.8rem;
+      background: rgba(255,255,255,0.15);
+      border: 2px solid #ffd700;
+      border-radius: 14px;
+      color: #fff;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s;
+    }
+
+    .ctrl-btn:active {
+      background: rgba(255,215,0,0.3);
+    }
+
+    /* Show mobile controls on touch devices */
+    @media (max-width: 600px) {
+      #mobileControls { display: flex; }
+      h1 { font-size: 1.4rem; }
+      #gameCanvas { width: 340px; height: 340px; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🐱 Cat &amp; Rat Catcher! 🐭</h1>
+
+  <!-- Score display -->
+  <div id="scoreboard">
+    <div class="score-box">Score: <span id="scoreDisplay">0</span></div>
+    <div class="score-box">Best: <span id="bestDisplay">0</span></div>
+    <div class="score-box">Time: <span id="timerDisplay">30</span>s</div>
+  </div>
+
+  <!-- The game canvas where everything is drawn -->
+  <canvas id="gameCanvas" width="480" height="480"></canvas>
+
+  <!-- Start / Restart button -->
+  <button id="startBtn">🐱 Start Game!</button>
+
+  <!-- Mobile on-screen controls -->
+  <div id="mobileControls">
+    <div style="display:flex; gap:12px; justify-content:center; width:100%;">
+      <button class="ctrl-btn" id="btnUp">⬆️</button>
+    </div>
+    <div style="display:flex; gap:12px; justify-content:center; width:100%;">
+      <button class="ctrl-btn" id="btnLeft">⬅️</button>
+      <button class="ctrl-btn" id="btnDown">⬇️</button>
+      <button class="ctrl-btn" id="btnRight">➡️</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // GAME SETUP
+    // ============================================================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const TILE = 40;          // size of each grid square in pixels
+    const COLS = canvas.width / TILE;   // number of columns (12)
+    const ROWS = canvas.height / TILE;  // number of rows (12)
+
+    // Game state variables
+    let score = 0;
+    let bestScore = 0;
+    let timeLeft = 30;
+    let gameRunning = false;
+    let gameLoop;
+    let timerInterval;
+
+    // --- PLAYER (CAT) ---
+    let cat = {
+      x: 0,           // grid column position
+      y: 0,           // grid row position
+      dx: 0,          // movement direction X
+      dy: 0,          // movement direction Y
+      moving: false,  // is the cat currently sliding?
+      px: 0,          // pixel x (for smooth animation)
+      py: 0,          // pixel y (for smooth animation)
+      speed: 6,       // pixels per frame when moving
+    };
+
+    // --- RATS array ---
+    let rats = [];
+
+    // --- PARTICLE EFFECTS ---
+    let particles = [];
+
+    // --- CHEESE POWER-UP ---
+    let cheese = null;
+    let cheeseTimer = 0;
+
+    // Emoji references for drawing
+    const CAT_EMOJI    = '🐱';
+    const RAT_EMOJI    = '🐭';
+    const CHEESE_EMOJI = '🧀';
+    const STAR_EMOJI   = '⭐';
+
+    // ============================================================
+    // UTILITY: random integer between min and max (inclusive)
+    // ============================================================
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // ============================================================
+    // SPAWN RATS
+    // Randomly place rats on the grid, away from the cat
+    // ============================================================
+    function spawnRats(count) {
+      rats = [];
+      for (let i = 0; i < count; i++) {
+        let rx, ry;
+        // Keep trying until we find a spot far from the cat
+        do {
+          rx = randInt(0, COLS - 1);
+          ry = randInt(0, ROWS - 1);
+        } while (Math.abs(rx - cat.x) < 3 && Math.abs(ry - cat.y) < 3);
+
+        rats.push({
+          x: rx,
+          y: ry,
+          px: rx * TILE,
+          py: ry * TILE,
+          dx: 0,
+          dy: 0,
+          moving: false,
+          speed: 3 + Math.random() * 2,  // slightly random speed
+          moveTimer: randInt(30, 90),     // frames until next move
+        });
+      }
+    }
+
+    // ============================================================
+    // SPAWN CHEESE POWER-UP (appears every ~8 seconds)
+    // ============================================================
+    function spawnCheese() {
+      cheese = {
+        x: randInt(1, COLS - 2),
+        y: randInt(1, ROWS - 2),
+      };
+      cheeseTimer = 300; // lasts 5 seconds at 60fps
+    }
+
+    // ============================================================
+    // CREATE PARTICLE BURST (fun visual when catching a rat!)
+    // ============================================================
+    function spawnParticles(px, py, color) {
+      for (let i = 0; i < 14; i++) {
+        particles.push({
+          x: px,
+          y: py,
+          vx: (Math.random() - 0.5) * 8,
+          vy: (Math.random() - 0.5) * 8,
+          life: 40,
+          maxLife: 40,
+          color: color,
+          size: randInt(4, 10),
+        });
+      }
+    }
+
+    // ============================================================
+    // INITIALIZE / RESET GAME
+    // ============================================================
+    function initGame() {
+      score = 0;
+      timeLeft = 30;
+      particles = [];
+      cheese = null;
+      cheeseTimer = 0;
+
+      // Place cat in top-left corner
+      cat.x = 0;
+      cat.y = 0;
+      cat.px = 0;
+      cat.py = 0;
+      cat.dx = 0;
+      cat.dy = 0;
+      cat.moving = false;
+
+      spawnRats(5); // start with 5 rats
+      updateScoreDisplay();
+    }
+
+    // ============================================================
+    // UPDATE SCORE DISPLAY
+    // ============================================================
+    function updateScoreDisplay() {
+      document.getElementById('scoreDisplay').textContent = score;
+      document.getElementById('bestDisplay').textContent = bestScore;
+      document.getElementById('timerDisplay').textContent = timeLeft;
+    }
+
+    // ============================================================
+    // HANDLE KEYBOARD INPUT
+    // ============================================================
+    document.addEventListener('keydown', function(e) {
+      if (!gameRunning) return;
+      if (cat.moving) return; // wait until current move finishes
+
+      if (e.key === 'ArrowUp'    || e.key === 'w') { cat.dx =  0; cat.dy = -1; cat.moving = true; }
+      if (e.key === 'ArrowDown'  || e.key === 's') { cat.dx =  0; cat.dy =  1; cat.moving = true; }
+      if (e.key === 'ArrowLeft'  || e.key === 'a') { cat.dx = -1; cat.dy =  0; cat.moving = true; }
+      if (e.key === 'ArrowRight' || e.key === 'd') { cat.dx =  1; cat.dy =  0; cat.moving = true; }
+    });
+
+    // ============================================================
+    // MOBILE BUTTON CONTROLS
+    // ============================================================
+    function mobileMove(dx, dy) {
+      if (!gameRunning || cat.moving) return;
+      cat.dx = dx; cat.dy = dy; cat.moving = true;
+    }
+    document.getElementById('btnUp').addEventListener('click',    () => mobileMove(0, -1));
+    document.getElementById('btnDown').addEventListener('click',  () => mobileMove(0,  1));
+    document.getElementById('btnLeft').addEventListener('click',  () => mobileMove(-1, 0));
+    document.getElementById('btnRight').addEventListener('click', () => mobileMove(1,  0));
+
+    // ============================================================
+    // MOVE A GRID ENTITY SMOOTHLY
+    // Returns true when the move is complete
+    // ============================================================
+    function slideEntity(entity) {
+      if (!entity.moving) return true;
+
+      let targetX = entity.x * TILE;
+      let targetY = entity.y * TILE;
+
+      // Figure out where we're going (next grid position)
+      let nextX = entity.x + entity.dx;
+      let nextY = entity.y + entity.dy;
+
+      // Clamp to canvas bounds
+      nextX = Math.max(0, Math.min(COLS - 1, nextX));
+      nextY = Math.max(0, Math.min(ROWS - 1, nextY));
+
+      let destX = nextX * TILE;
+      let destY = nextY * TILE;
+
+      // Move pixel position toward destination
+      if (entity.px < destX) entity.px = Math.min(entity.px + entity.speed, destX);
+      if (entity.px > destX) entity.px = Math.max(entity.px - entity.speed, destX);
+      if (entity.py < destY) entity.py = Math.min(entity.py + entity.speed, destY);
+      if (entity.py > destY) entity.py = Math.max(entity.py - entity.speed, destY);
+
+      // Check if we've arrived
+      if (entity.px === destX && entity.py === destY) {
+        entity.x = nextX;
+        entity.y = nextY;
+        entity.moving = false;
+        return true;
+      }
+      return false;
+    }
+
+    // ============================================================
+    // RAT AI: rats wander randomly
+    // ============================================================
+    function updateRats() {
+      rats.forEach(rat => {
+        if (rat.moving) {
+          slideEntity(rat);
+        } else {
+          rat.moveTimer--;
+          if (rat.moveTimer <= 0) {
+            // Pick a random direction
+            const dirs = [{dx:1,dy:0},{dx:-1,dy:0},{dx:0,dy:1},{dx:0,dy:-1}];
+            const d = dirs[randInt(0, 3)];
+            rat.dx = d.dx;
+            rat.dy = d.dy;
+            rat.moving = true;
+            rat.moveTimer = randInt(20, 60);
+          }
+        }
+      });
+    }
+
+    // ============================================================
+    // CHECK COLLISIONS: Did the cat catch a rat?
+    // ============================================================
+    function checkCollisions() {
+      for (let i = rats.length - 1; i >= 0; i--) {
+        if (rats[i].x === cat.x && rats[i].y === cat.y) {
+          // Caught a rat! 🎉
+          spawnParticles(cat.px + TILE/2, cat.py + TILE/2, '#ffd700');
+          rats.splice(i, 1);
+          score += 10;
+          if (score > bestScore) bestScore = score;
+
+          // Add a new rat to keep things fun
+          setTimeout(() => {
+            if (gameRunning) spawnRats(1);
+          }, 2000);
+        }
+      }
+
+      // Check cheese power-up collision
+      if (cheese && cat.x === cheese.x && cat.y === cheese.y) {
+        spawnParticles(cat.px + TILE/2, cat.py + TILE/2, '#ff6b35');
+        score += 25;
+        timeLeft = Math.min(timeLeft + 5, 60); // bonus time!
+        if (score > bestScore) bestScore = score;
+        cheese = null;
+        cheeseTimer = 0;
+      }
+    }
+
+    // ============================================================
+    // UPDATE PARTICLES
+    // ============================================================
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.3; // gravity
+        p.life--;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    // ============================================================
+    // DRAW EVERYTHING
+    // ============================================================
+    function draw() {
+      // --- Background ---
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw grid lines (subtle)
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      for (let c = 0; c <= COLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c * TILE, 0);
+        ctx.lineTo(c * TILE, canvas.height);
+        ctx.stroke();
+      }
+      for (let r = 0; r <= ROWS; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * TILE);
+        ctx.lineTo(canvas.width, r * TILE);
+        ctx.stroke();
+      }
+
+      // --- Draw cheese power-up ---
+      if (cheese) {
+        // Pulsing glow effect
+        const pulse = 0.7 + 0.3 * Math.sin(Date.now() / 200);
+        ctx.save();
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 20 * pulse;
+        ctx.font = `${TILE - 4}px serif`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(CHEESE_EMOJI, cheese.x * TILE + 2, cheese.y * TILE + 2);
+        ctx.restore();
+      }
+
+      // --- Draw rats ---
+      ctx.font = `${TILE - 4}px serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      rats.forEach(rat => {
+        ctx.fillText(RAT_EMOJI, rat.px + 2, rat.py + 2);
+      });
+
+      // --- Draw cat (player) ---
+      ctx.save();
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 18;
+      ctx.font = `${TILE - 2}px serif`;
+      ctx.fillText(CAT_EMOJI, cat.px + 1, cat.py + 1);
+      ctx.restore();
+
+      // --- Draw particles ---
+      particles.forEach(p => {
+        const alpha = p.life / p.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // --- Score popup text (floating +10s) ---
+      // (handled by particles for visual effect)
+    }
+
+    // ============================================================
+    // DRAW GAME OVER SCREEN
+    // ============================================================
+    function drawGameOver() {
+      // Dark overlay
+      ctx.fillStyle = 'rgba(0,0,0,0.75)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Title
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.font = 'bold 48px Segoe UI, Arial';
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#ff6b35';
+      ctx.shadowBlur = 24;
+      ctx.fillText('Time\'s Up! 🐱', canvas.width / 2, canvas.height / 2 - 70);
+
+      ctx.font = 'bold 30px Segoe UI, Arial';
+      ctx.fillStyle = '#fff';
+      ctx.shadowBlur = 10;
+      ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 - 15);
+
+      ctx.font = '22px Segoe UI, Arial';
+      ctx.fillStyle = '#adf';
+      ctx.fillText(`Best: ${bestScore}`, canvas.width / 2, canvas.height / 2 + 30);
+
+      ctx.font = '20px Segoe UI, Arial';
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText('Press Start to play again!', canvas.width / 2, canvas.height / 2 + 80);
+
+      ctx.restore();
+    }
+
+    // ============================================================
+    // DRAW INTRO / TITLE SCREEN
+    // ============================================================
+    function drawIntro() {
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      ctx.font = '80px serif';
+      ctx.fillText('🐱', canvas.width / 2, canvas.height / 2 - 80);
+
+      ctx.font = 'bold 34px Segoe UI, Arial';
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = '#ff6b35';
+      ctx.shadowBlur = 20;
+      ctx.fillText('Catch all the rats!', canvas.width / 2, canvas.height / 2 + 10);
+
+      ctx.font = '18px Segoe UI, Arial';
+      ctx.fillStyle = '#adf';
+      ctx.shadowBlur = 0;
+      ctx.fillText('Use Arrow Keys or WASD to move', canvas.width / 2, canvas.height / 2 + 55);
+
+      ctx.font = '18px Segoe UI, Arial';
+      ctx.fillStyle = '#ffd700';
+      ctx.fillText('🧀 Grab cheese for bonus points & time!', canvas.width / 2, canvas.height / 2 + 90);
+
+      ctx.restore();
+    }
+
+    // ============================================================
+    // MAIN GAME LOOP
+    // ============================================================
+    function update() {
+      if (!gameRunning) return;
+
+      // Update cat position
+      if (cat.moving) {
+        slideEntity(cat);
+      }
+
+      // Update rats AI
+      updateRats();
+
+      // Cheese timer
+      if (cheeseTimer > 0) {
+        cheeseTimer--;
+        if (cheeseTimer <= 0) cheese = null;
+      }
+
+      // Spawn cheese occasionally
+      if (!cheese && Math.random() < 0.002) {
+        spawnCheese();
+      }
+
+      // Check if cat caught a rat
+      checkCollisions();
+
+      // Update particle effects
+      updateParticles();
+
+      // Update HUD
+      updateScoreDisplay();
+
+      // Draw everything
+      draw();
+    }
+
+    // ============================================================
+    // TIMER: counts down every second
+    // ============================================================
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!gameRunning) return;
+        timeLeft--;
+        updateScoreDisplay();
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    // ============================================================
+    // END GAME
+    // ============================================================
+    function endGame() {
+      gameRunning = false;
+      clearInterval(timerInterval);
+      cancelAnimationFrame(gameLoop);
+      drawGameOver();
+      document.getElementById('startBtn').textContent = '🐱 Play Again!';
+      document.getElementById('startBtn').style.display = 'block';
+    }
+
+    // ============================================================
+    // START GAME
+    // ============================================================
+    function startGame() {
+      document.getElementById('startBtn').style.display = 'none';
+      initGame();
+      gameRunning = true;
+      startTimer();
+
+      // The animation loop
+      function loop() {
+        update();
+        gameLoop = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    // ============================================================
+    // BUTTON CLICK
+    // ============================================================
+    document.getElementById('startBtn').addEventListener('click', startGame);
+
+    // ============================================================
+    // SHOW INTRO SCREEN ON LOAD
+    // ============================================================
+    drawIntro();
+  </script>
+</body>
+</html>
