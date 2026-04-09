@@ -1,1 +1,516 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园迷宫大冒险</title>
+<style>
+  /* 全局样式 */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: 100vh;
+    font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+    overflow: hidden;
+  }
+  #gameTitle {
+    color: #fff; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    margin-bottom: 8px; letter-spacing: 2px;
+  }
+  #hud {
+    display: flex; gap: 24px; align-items: center;
+    background: rgba(255,255,255,0.25); border-radius: 20px;
+    padding: 8px 24px; margin-bottom: 8px; backdrop-filter: blur(4px);
+  }
+  .hud-item { color: #fff; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.4); }
+  #canvas {
+    border: 4px solid #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: block;
+  }
+  #message {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; z-index: 10;
+  }
+  #messageBox {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 24px; padding: 40px 50px; text-align: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5); max-width: 380px;
+  }
+  #messageTitle { font-size: 36px; margin-bottom: 12px; }
+  #messageText { font-size: 16px; color: #555; margin-bottom: 24px; line-height: 1.6; }
+  #messageBtn {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff; border: none; padding: 14px 40px; border-radius: 30px;
+    font-size: 18px; font-weight: bold; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102,126,234,0.5); transition: transform 0.1s;
+  }
+  #messageBtn:hover { transform: scale(1.05); }
+  #controls {
+    color: rgba(255,255,255,0.8); font-size: 13px; margin-top: 8px;
+    text-align: center; letter-spacing: 1px;
+  }
+  /* 手机方向键 */
+  #mobileControls {
+    display: none; margin-top: 10px;
+  }
+  #dpad {
+    display: grid; grid-template-columns: 44px 44px 44px;
+    grid-template-rows: 44px 44px 44px; gap: 4px;
+  }
+  .dpad-btn {
+    background: rgba(255,255,255,0.3); border: 2px solid rgba(255,255,255,0.5);
+    border-radius: 10px; color: #fff; font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    user-select: none; -webkit-user-select: none; transition: background 0.1s;
+  }
+  .dpad-btn:active { background: rgba(255,255,255,0.6); }
+  .dpad-center { background: transparent; border-color: transparent; }
+  @media (max-width: 600px) {
+    #mobileControls { display: block; }
+    #gameTitle { font-size: 20px; }
+    .hud-item { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div id="gameTitle">🏫 校园迷宫大冒险</div>
+<div id="hud">
+  <div class="hud-item" id="livesDisplay">❤️❤️❤️</div>
+  <div class="hud-item" id="keysDisplay">🔑 0/5</div>
+  <div class="hud-item" id="levelDisplay">第 1 关</div>
+</div>
+<canvas id="canvas"></canvas>
+<div id="controls">⬆️⬇️⬅️➡️ 键盘方向键移动 | 收集5把钥匙→找大门通关！</div>
+
+<!-- 手机虚拟方向键 -->
+<div id="mobileControls">
+  <div id="dpad">
+    <div></div>
+    <div class="dpad-btn" id="btnUp">▲</div>
+    <div></div>
+    <div class="dpad-btn" id="btnLeft">◀</div>
+    <div class="dpad-center"></div>
+    <div class="dpad-btn" id="btnRight">▶</div>
+    <div></div>
+    <div class="dpad-btn" id="btnDown">▼</div>
+    <div></div>
+  </div>
+</div>
+
+<!-- 消息弹窗 -->
+<div id="message">
+  <div id="messageBox">
+    <div id="messageTitle">🏫 校园迷宫</div>
+    <div id="messageText">在校园迷宫中找到 <b>5把钥匙🔑</b>，<br>然后到 <b>图书馆大门📚</b> 通关！<br>小心巡逻老师👨‍🏫，碰到扣1条命！</div>
+    <button id="messageBtn">开始冒险！</button>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ===== 画布设置 =====
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // 格子大小与地图尺寸
+  const TILE = 40;
+  const COLS = 17;
+  const ROWS = 13;
+  canvas.width  = COLS * TILE;
+  canvas.height = ROWS * TILE;
+
+  // ===== 游戏常量 =====
+  const EMPTY = 0, WALL = 1, KEY = 2, DOOR = 3, SIGN = 4;
+
+  // ===== 三关地图定义 =====
+  // 0=空地 1=墙 2=钥匙 3=终点门 4=提示牌
+  const LEVELS = [
+    // 第1关
+    {
+      map: [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,1,0,2,0,0,0,1,0,0,0,0,0,1],
+        [1,0,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
+        [1,0,1,0,0,0,0,0,1,0,0,0,1,0,2,0,1],
+        [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1],
+        [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+        [1,1,1,0,1,0,1,1,1,0,1,1,1,1,1,0,1],
+        [1,2,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
+        [1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1],
+        [1,0,0,0,0,0,1,0,0,0,0,0,1,2,0,4,1],
+        [1,0,1,1,1,1,1,1,1,0,1,1,1,1,1,0,1],
+        [1,2,0,0,0,0,0,0,0,0,0,0,0,0,3,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      ],
+      playerStart: {x:1, y:1},
+      teachers: [
+        {x:8, y:5, dx:1, dy:0, steps:0, maxSteps:4},
+        {x:3, y:9, dx:0, dy:1, steps:0, maxSteps:2},
+        {x:11, y:7, dx:1, dy:0, steps:0, maxSteps:3},
+      ]
+    },
+    // 第2关
+    {
+      map: [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,2,1,0,0,0,1,0,0,0,1,0,0,0,1],
+        [1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+        [1,0,0,0,0,0,1,0,0,0,1,2,0,0,1,0,1],
+        [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1],
+        [1,0,1,0,0,0,0,0,0,0,0,0,0,2,1,0,1],
+        [1,0,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
+        [1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,1],
+        [1,1,1,1,1,0,1,1,1,0,1,1,1,1,1,0,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,1],
+        [1,0,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1],
+        [1,2,0,0,1,0,0,2,0,0,0,0,0,0,3,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      ],
+      playerStart: {x:1, y:1},
+      teachers: [
+        {x:7, y:1, dx:1, dy:0, steps:0, maxSteps:3},
+        {x:3, y:6, dx:0, dy:1, steps:0, maxSteps:2},
+        {x:9, y:9, dx:-1, dy:0, steps:0, maxSteps:4},
+        {x:13, y:3, dx:0, dy:1, steps:0, maxSteps:3},
+      ]
+    },
+    // 第3关
+    {
+      map: [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,1,0,0,0,1,0,0,0,1,0,2,0,0,0,1],
+        [1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,0,1],
+        [1,2,0,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
+        [1,1,1,1,1,1,1,0,1,1,1,1,1,0,1,0,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+        [1,0,1,1,1,0,1,1,1,0,1,0,1,1,1,0,1],
+        [1,0,0,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
+        [1,1,1,0,1,0,1,0,1,0,1,1,1,0,1,0,1],
+        [1,0,4,0,0,0,1,0,0,0,0,0,0,2,1,0,1],
+        [1,0,1,1,1,1,1,1,1,1,1,0,1,1,1,0,1],
+        [1,2,0,0,0,0,0,0,2,0,0,0,0,0,3,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      ],
+      playerStart: {x:1, y:1},
+      teachers: [
+        {x:9, y:1, dx:1, dy:0, steps:0, maxSteps:3},
+        {x:1, y:7, dx:0, dy:1, steps:0, maxSteps:2},
+        {x:6, y:5, dx:0, dy:1, steps:0, maxSteps:2},
+        {x:11, y:7, dx:1, dy:0, steps:0, maxSteps:3},
+        {x:5, y:9, dx:1, dy:0, steps:0, maxSteps:3},
+      ]
+    }
+  ];
+
+  // ===== 游戏状态 =====
+  let currentLevel = 0;
+  let lives = 3;
+  let keysCollected = 0;
+  let player = {};
+  let teachers = [];
+  let mapData = [];
+  let gameRunning = false;
+  let invincible = false; // 被碰后短暂无敌
+  let invincibleTimer = 0;
+  let signMessage = '';
+  let signTimer = 0;
+
+  // 移动计时（防止按键太快）
+  let moveTimer = 0;
+  const MOVE_DELAY = 8; // 帧数
+
+  // 教师移动计时
+  let teacherMoveTimer = 0;
+  const TEACHER_MOVE_DELAY = 22;
+
+  // 动画帧计数
+  let frameCount = 0;
+
+  // 按键状态
+  const keys = {};
+
+  // ===== 颜色主题 =====
+  const COLORS = {
+    floor: ['#FFF9E6','#FFF3CC'],
+    wall: '#6C5CE7',
+    wallTop: '#A29BFE',
+    wallShadow: '#4A3AB8',
+    key: '#FDCB6E',
+    door: '#00B894',
+    doorLocked: '#B2BEC3',
+    sign: '#FD79A8',
+    player: '#0984E3',
+    playerShirt: '#74B9FF',
+    teacher: '#D63031',
+    teacherShirt: '#FF7675',
+    heart: '#E17055',
+  };
+
+  // ===== 初始化关卡 =====
+  function initLevel(levelIdx) {
+    const lvl = LEVELS[levelIdx];
+    // 深拷贝地图
+    mapData = lvl.map.map(row => row.slice());
+    // 玩家位置
+    player = { x: lvl.playerStart.x, y: lvl.playerStart.y };
+    keysCollected = 0;
+    // 教师深拷贝
+    teachers = lvl.teachers.map(t => Object.assign({}, t));
+    invincible = false; invincibleTimer = 0;
+    moveTimer = 0; teacherMoveTimer = 0;
+    signMessage = ''; signTimer = 0;
+    updateHUD();
+  }
+
+  function updateHUD() {
+    // 生命显示
+    let heartsStr = '';
+    for(let i=0;i<lives;i++) heartsStr += '❤️';
+    for(let i=lives;i<3;i++) heartsStr += '🖤';
+    document.getElementById('livesDisplay').textContent = heartsStr;
+    document.getElementById('keysDisplay').textContent = '🔑 ' + keysCollected + '/5';
+    document.getElementById('levelDisplay').textContent = '第 ' + (currentLevel+1) + ' 关';
+  }
+
+  // ===== 碰撞检测：是否是墙 =====
+  function isWall(tx, ty) {
+    if(tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true;
+    return mapData[ty][tx] === WALL;
+  }
+
+  // ===== 玩家移动 =====
+  function movePlayer(dx, dy) {
+    const nx = player.x + dx;
+    const ny = player.y + dy;
+    if(isWall(nx, ny)) return;
+
+    player.x = nx; player.y = ny;
+
+    const tile = mapData[ny][nx];
+    if(tile === KEY) {
+      // 捡钥匙
+      mapData[ny][nx] = EMPTY;
+      keysCollected++;
+      showSign('🔑 捡到钥匙！还差 ' + (5-keysCollected) + ' 把！');
+      if(keysCollected >= 5) showSign('🎉 集齐5把钥匙！快去找图书馆大门！');
+      updateHUD();
+    } else if(tile === DOOR) {
+      if(keysCollected >= 5) {
+        // 通关！
+        gameRunning = false;
+        if(currentLevel < LEVELS.length - 1) {
+          showMessage('🎉 过关！', '太棒了！你成功找到了所有钥匙并打开了图书馆大门！<br>准备进入第 '+(currentLevel+2)+' 关！', '下一关！', function(){
+            currentLevel++;
+            initLevel(currentLevel);
+            gameRunning = true;
+          });
+        } else {
+          showMessage('🏆 游戏通关！', '恭喜你！你完成了全部3关校园迷宫挑战！<br>你是真正的迷宫冒险家！🌟', '再玩一次！', function(){
+            currentLevel = 0; lives = 3;
+            initLevel(0); gameRunning = true;
+          });
+        }
+      } else {
+        showSign('🔒 门锁着！需要5把钥匙（还差'+(5-keysCollected)+'把）');
+      }
+    } else if(tile === SIGN) {
+      showSign('📌 提示：钥匙藏在迷宫各处，小心老师！');
+    }
+  }
+
+  // 显示提示信息
+  function showSign(msg) {
+    signMessage = msg; signTimer = 150;
+  }
+
+  // ===== 教师移动 =====
+  function moveTeachers() {
+    teachers.forEach(t => {
+      // 尝试按当前方向移动
+      const nx = t.x + t.dx;
+      const ny = t.y + t.dy;
+      if(isWall(nx, ny) || mapData[ny][nx] === DOOR) {
+        // 反向
+        t.dx = -t.dx; t.dy = -t.dy;
+        t.steps = 0;
+      } else {
+        t.x = nx; t.y = ny;
+        t.steps++;
+        if(t.steps >= t.maxSteps) {
+          t.dx = -t.dx; t.dy = -t.dy;
+          t.steps = 0;
+        }
+      }
+    });
+  }
+
+  // ===== 碰到老师检测 =====
+  function checkTeacherCollision() {
+    if(invincible) return;
+    for(let t of teachers) {
+      if(t.x === player.x && t.y === player.y) {
+        lives--;
+        updateHUD();
+        invincible = true; invincibleTimer = 90;
+        showSign(lives > 0 ? '💥 被老师抓住！剩余 '+lives+' 条命！' : '');
+        if(lives <= 0) {
+          gameRunning = false;
+          showMessage('💔 游戏结束', '被老师抓住太多次了...<br>不要灰心，再试一次！', '重新开始！', function(){
+            currentLevel = 0; lives = 3;
+            initLevel(0); gameRunning = true;
+          });
+        }
+        break;
+      }
+    }
+  }
+
+  // ===== 绘制函数 =====
+
+  // 绘制地板
+  function drawFloor() {
+    for(let r=0;r<ROWS;r++) {
+      for(let c=0;c<COLS;c++) {
+        // 棋盘格效果
+        ctx.fillStyle = ((r+c)%2===0) ? COLORS.floor[0] : COLORS.floor[1];
+        ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
+      }
+    }
+  }
+
+  // 绘制墙壁（3D感）
+  function drawWall(c, r) {
+    const x = c*TILE, y = r*TILE;
+    // 主体
+    ctx.fillStyle = COLORS.wall;
+    ctx.fillRect(x+2, y+2, TILE-4, TILE-4);
+    // 顶部高光
+    ctx.fillStyle = COLORS.wallTop;
+    ctx.fillRect(x+2, y+2, TILE-4, 8);
+    // 右下阴影
+    ctx.fillStyle = COLORS.wallShadow;
+    ctx.fillRect(x+TILE-6, y+2, 4, TILE-4);
+    ctx.fillRect(x+2, y+TILE-6, TILE-4, 4);
+    // 砖块纹理
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x+TILE/2, y+2); ctx.lineTo(x+TILE/2, y+TILE-6);
+    ctx.moveTo(x+2, y+TILE/2); ctx.lineTo(x+TILE-6, y+TILE/2);
+    ctx.stroke();
+  }
+
+  // 绘制钥匙（带闪烁动画）
+  function drawKey(c, r) {
+    const x = c*TILE + TILE/2, y = r*TILE + TILE/2;
+    const bob = Math.sin(frameCount*0.08)*3;
+    ctx.save();
+    ctx.translate(x, y+bob);
+    // 光环
+    ctx.globalAlpha = 0.3 + 0.2*Math.sin(frameCount*0.1);
+    ctx.fillStyle = '#FDCB6E';
+    ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // 钥匙主体
+    ctx.fillStyle = '#FDCB6E';
+    ctx.strokeStyle = '#E17055'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(-4, -2, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(-4, -2, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#FFF3CC'; ctx.fill(); ctx.stroke();
+    // 钥匙柄
+    ctx.fillStyle = '#FDCB6E';
+    ctx.beginPath(); ctx.rect(2, -4, 14, 5); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.rect(12, -4, 3, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.rect(8, -4, 3, 7); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  // 绘制大门
+  function drawDoor(c, r) {
+    const x = c*TILE, y = r*TILE;
+    const locked = keysCollected < 5;
+    // 门框
+    ctx.fillStyle = locked ? '#636E72' : '#00B894';
+    ctx.fillRect(x+2, y+2, TILE-4, TILE-4);
+    // 门板
+    ctx.fillStyle = locked ? '#B2BEC3' : '#55EFC4';
+    ctx.fillRect(x+6, y+6, TILE-12, TILE-12);
+    // 门把手
+    ctx.fillStyle = locked ? '#636E72' : '#FDCB6E';
+    ctx.beginPath(); ctx.arc(x+TILE-14, y+TILE/2, 4, 0, Math.PI*2); ctx.fill();
+    // 书本图标
+    ctx.font = '18px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(locked ? '🔒' : '📚', x+TILE/2, y+TILE/2);
+  }
+
+  // 绘制提示牌
+  function drawSign(c, r) {
+    const x = c*TILE, y = r*TILE;
+    ctx.fillStyle = '#FD79A8';
+    ctx.beginPath();
+    ctx.roundRect(x+4, y+4, TILE-8, TILE-10, 4);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('📌', x+TILE/2, y+TILE/2-2);
+    // 柱子
+    ctx.fillStyle = '#636E72';
+    ctx.fillRect(x+TILE/2-2, y+TILE-10, 4, 10);
+  }
+
+  // 绘制玩家
+  function drawPlayer() {
+    const x = player.x*TILE + TILE/2;
+    const y = player.y*TILE + TILE/2;
+    // 无敌时闪烁
+    if(invincible && frameCount%6 < 3) return;
+    ctx.save();
+    ctx.translate(x, y);
+    // 阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(0, 14, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+    // 身体（上衣）
+    ctx.fillStyle = COLORS.player;
+    ctx.beginPath(); ctx.roundRect(-10, -4, 20, 16, 4); ctx.fill();
+    // 书包
+    ctx.fillStyle = '#FDCB6E';
+    ctx.beginPath(); ctx.roundRect(7, -2, 6, 12, 2); ctx.fill();
+    // 头
+    ctx.fillStyle = '#FFEAA7';
+    ctx.beginPath(); ctx.arc(0, -12, 11, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#FDCB6E'; ctx.lineWidth = 1.5; ctx.stroke();
+    // 头发
+    ctx.fillStyle = '#2D3436';
+    ctx.beginPath(); ctx.arc(0, -18, 9, Math.PI, 0); ctx.fill();
+    // 眼睛
+    ctx.fillStyle = '#2D3436';
+    const eyeBob = Math.sin(frameCount*0.05)*0.5;
+    ctx.beginPath(); ctx.arc(-4, -12+eyeBob, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(4, -12+eyeBob, 2, 0, Math.PI*2); ctx.fill();
+    // 笑脸
+    ctx.strokeStyle = '#E17055'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(0, -10, 4, 0.2, Math.PI-0.2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // 绘制老师
+  function drawTeacher(t) {
+    const x = t.x*TILE + TILE/2;
+    const y = t.y*TILE + TILE/2;
+    ctx.save();
+    ctx.translate(x, y);
+    // 阴影
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(0, 14, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+    // 身体
+    ctx.fillStyle = COLORS.teacher;
+    ctx.beginPath(); ctx.roundRect(-10, -4, 20, 16, 4); ctx.fill();
+    // 领带
+    ctx.fillStyle = '#FDCB6E';
+    ctx.beginPath();
+    ctx.moveTo(-
