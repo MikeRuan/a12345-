@@ -63,7 +63,7 @@
   #messageTitle { font-size: 36px; margin-bottom: 12px; }
   #messageText { font-size: 16px; color: #555; margin-bottom: 24px; line-height: 1.6; }
 
-  /* 弹窗按钮样式 — 注意：按钮在HTML里用class命名，不用id=messageBtn */
+  /* 弹窗按钮样式 */
   .msg-btn {
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: #fff; border: none; padding: 14px 40px; border-radius: 30px;
@@ -72,6 +72,8 @@
     pointer-events: auto;
     position: relative;
     z-index: 101;
+    display: block;
+    margin: 0 auto;
   }
   .msg-btn:hover { transform: scale(1.05); }
 
@@ -120,12 +122,7 @@
   <!-- canvas：z-index=1，游戏开始前隐藏 -->
   <canvas id="canvas"></canvas>
 
-  <!-- 
-    开始/消息弹窗：z-index=100
-    注意：弹窗内的按钮由JavaScript动态创建并插入，
-    不在HTML里预置任何id=messageBtn的按钮，
-    避免隐藏按钮拦截点击事件！
-  -->
+  <!-- 开始/消息弹窗：z-index=100，按钮由JS动态插入 -->
   <div id="message">
     <div id="messageBox">
       <div id="messageTitle">🏫 校园迷宫</div>
@@ -134,7 +131,7 @@
         然后到 <b>图书馆大门📚</b> 通关！<br>
         小心巡逻老师👨‍🏫，碰到扣1条命！
       </div>
-      <!-- 按钮由JS动态插入到这里，不预置按钮 -->
+      <!-- 按钮由JS动态插入，不预置任何按钮 -->
     </div>
   </div>
 
@@ -275,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const TEACHER_MOVE_DELAY = 22;
   let frameCount = 0;
   const keys = {};
+  let animFrameId = null; // 记录requestAnimationFrame的id，避免重复启动
 
   // ===== 颜色主题 =====
   const COLORS = {
@@ -290,107 +288,144 @@ document.addEventListener('DOMContentLoaded', function() {
     teacher: '#D63031',
   };
 
-  // ===== 弹窗管理：动态创建按钮，避免预置按钮拦截点击 =====
+  // ===================================================
+  // ===== 弹窗管理：动态创建按钮，确保按钮始终可点击 =====
+  // ===================================================
 
-  // 显示弹窗，动态插入一个全新按钮
+  /**
+   * showMessage: 显示弹窗，动态创建一个全新按钮并绑定回调
+   * @param {string} title    - 弹窗标题（纯文本）
+   * @param {string} text     - 弹窗正文（可含HTML）
+   * @param {string} btnText  - 按钮文字
+   * @param {function} callback - 点击按钮后执行的回调
+   */
   function showMessage(title, text, btnText, callback) {
+    // 1. 更新标题和正文
     messageTitleEl.textContent = title;
     messageTextEl.innerHTML = text;
 
-    // 移除旧按钮（如果存在），防止重复绑定事件
-    const oldBtn = messageBox.querySelector('.msg-btn');
-    if (oldBtn) { messageBox.removeChild(oldBtn); }
+    // 2. 移除messageBox内所有旧的.msg-btn按钮，防止重复
+    const oldBtns = messageBox.querySelectorAll('.msg-btn');
+    oldBtns.forEach(function(b) { messageBox.removeChild(b); });
 
-    // 创建全新按钮并绑定事件
+    // 3. 创建全新按钮
     const btn = document.createElement('button');
     btn.className = 'msg-btn';
     btn.textContent = btnText;
-    btn.addEventListener('click', function() {
-      // 先移除按钮并隐藏弹窗
-      messageBox.removeChild(btn);
+
+    // 4. 绑定点击事件：先隐藏弹窗，再执行回调
+    btn.addEventListener('click', function onBtnClick() {
+      // 移除按钮自身
+      if (btn.parentNode === messageBox) {
+        messageBox.removeChild(btn);
+      }
+      // 隐藏弹窗覆盖层
       messageDiv.style.display = 'none';
+      // 显示canvas
       canvas.style.display = 'block';
-      // 再执行回调
-      if (callback) { callback(); }
+      // 执行业务回调
+      if (typeof callback === 'function') {
+        callback();
+      }
     });
+
+    // 5. 将按钮插入messageBox
     messageBox.appendChild(btn);
 
-    // 显示弹窗
+    // 6. 显示弹窗覆盖层（确保在canvas之上）
     messageDiv.style.display = 'flex';
   }
 
-  // ===== 显示开始界面（首次）=====
-  // 直接调用showMessage显示初始弹窗，统一入口
+  // ===== 显示开始界面（首次进入） =====
   showMessage(
     '🏫 校园迷宫',
     '在校园迷宫中找到 <b>5把钥匙🔑</b>，<br>然后到 <b>图书馆大门📚</b> 通关！<br>小心巡逻老师👨‍🏫，碰到扣1条命！',
     '开始冒险！',
     function() {
-      // 开始游戏
+      // 点击"开始冒险！"后：初始化第0关并启动游戏循环
       currentLevel = 0;
       lives = 3;
       initLevel(0);
-      gameRunning = true;
-      requestAnimationFrame(gameLoop);
+      startGameLoop();
     }
   );
+
+  // ===== 启动游戏循环（只启动一次，防止多次叠加） =====
+  function startGameLoop() {
+    if (animFrameId) {
+      cancelAnimationFrame(animFrameId);
+      animFrameId = null;
+    }
+    gameRunning = true;
+    animFrameId = requestAnimationFrame(gameLoop);
+  }
 
   // ===== 初始化关卡 =====
   function initLevel(levelIdx) {
     const lvl = LEVELS[levelIdx];
-    mapData = lvl.map.map(row => row.slice()); // 深拷贝地图
+    // 深拷贝地图，避免修改原始数据
+    mapData = lvl.map.map(function(row) { return row.slice(); });
     player = { x: lvl.playerStart.x, y: lvl.playerStart.y };
     keysCollected = 0;
-    teachers = lvl.teachers.map(t => Object.assign({}, t));
-    invincible = false; invincibleTimer = 0;
-    moveTimer = 0; teacherMoveTimer = 0;
-    signMessage = ''; signTimer = 0;
+    teachers = lvl.teachers.map(function(t) { return Object.assign({}, t); });
+    invincible = false;
+    invincibleTimer = 0;
+    moveTimer = 0;
+    teacherMoveTimer = 0;
+    signMessage = '';
+    signTimer = 0;
     updateHUD();
   }
 
+  // ===== 更新顶部HUD显示 =====
   function updateHUD() {
     let heartsStr = '';
-    for(let i=0;i<lives;i++) heartsStr += '❤️';
-    for(let i=lives;i<3;i++) heartsStr += '🖤';
+    for (let i = 0; i < lives; i++) heartsStr += '❤️';
+    for (let i = lives; i < 3; i++) heartsStr += '🖤';
     document.getElementById('livesDisplay').textContent = heartsStr;
     document.getElementById('keysDisplay').textContent = '🔑 ' + keysCollected + '/5';
-    document.getElementById('levelDisplay').textContent = '第 ' + (currentLevel+1) + ' 关';
+    document.getElementById('levelDisplay').textContent = '第 ' + (currentLevel + 1) + ' 关';
   }
 
-  // ===== 碰撞检测 =====
+  // ===== 碰撞检测：是否是墙 =====
   function isWall(tx, ty) {
-    if(tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true;
+    if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true;
     return mapData[ty][tx] === WALL;
   }
 
-  // ===== 玩家移动 =====
+  // ===== 玩家移动逻辑 =====
   function movePlayer(dx, dy) {
     const nx = player.x + dx;
     const ny = player.y + dy;
-    if(isWall(nx, ny)) return;
-    player.x = nx; player.y = ny;
+    if (isWall(nx, ny)) return;
+    player.x = nx;
+    player.y = ny;
     const tile = mapData[ny][nx];
-    if(tile === KEY) {
+
+    if (tile === KEY) {
+      // 捡到钥匙
       mapData[ny][nx] = EMPTY;
       keysCollected++;
-      if(keysCollected >= 5) {
+      if (keysCollected >= 5) {
         showSign('🎉 集齐5把钥匙！快去找图书馆大门！');
       } else {
-        showSign('🔑 捡到钥匙！还差 ' + (5-keysCollected) + ' 把！');
+        showSign('🔑 捡到钥匙！还差 ' + (5 - keysCollected) + ' 把！');
       }
       updateHUD();
-    } else if(tile === DOOR) {
-      if(keysCollected >= 5) {
+    } else if (tile === DOOR) {
+      // 踩到门
+      if (keysCollected >= 5) {
+        // 通关！
         gameRunning = false;
-        if(currentLevel < LEVELS.length - 1) {
+        if (currentLevel < LEVELS.length - 1) {
           showMessage(
             '🎉 过关！',
-            '太棒了！你成功找到了所有钥匙并打开了图书馆大门！<br>准备进入第 '+(currentLevel+2)+' 关！',
+            '太棒了！你成功找到了所有钥匙并打开了图书馆大门！<br>准备进入第 ' + (currentLevel + 2) + ' 关！',
             '下一关！',
-            function(){
+            function() {
               currentLevel++;
               initLevel(currentLevel);
-              gameRunning = true;
+              startGameLoop();
             }
           );
         } else {
@@ -398,151 +433,157 @@ document.addEventListener('DOMContentLoaded', function() {
             '🏆 游戏通关！',
             '恭喜你！你完成了全部3关校园迷宫挑战！<br>你是真正的迷宫冒险家！🌟',
             '再玩一次！',
-            function(){
-              currentLevel = 0; lives = 3;
-              initLevel(0); gameRunning = true;
+            function() {
+              currentLevel = 0;
+              lives = 3;
+              initLevel(0);
+              startGameLoop();
             }
           );
         }
       } else {
-        showSign('🔒 门锁着！需要5把钥匙（还差'+(5-keysCollected)+'把）');
+        showSign('🔒 门锁着！需要5把钥匙（还差' + (5 - keysCollected) + '把）');
       }
-    } else if(tile === SIGN) {
+    } else if (tile === SIGN) {
       showSign('📌 提示：钥匙藏在迷宫各处，小心老师！');
     }
   }
 
+  // ===== 显示提示信息（屏幕底部悬浮文字） =====
   function showSign(msg) {
-    signMessage = msg; signTimer = 150;
+    signMessage = msg;
+    signTimer = 150;
   }
 
-  // ===== 老师移动 =====
+  // ===== 老师移动逻辑 =====
   function moveTeachers() {
-    teachers.forEach(t => {
+    teachers.forEach(function(t) {
       const nx = t.x + t.dx;
       const ny = t.y + t.dy;
-      if(isWall(nx, ny) || mapData[ny][nx] === DOOR) {
-        t.dx = -t.dx; t.dy = -t.dy;
+      if (isWall(nx, ny) || mapData[ny][nx] === DOOR) {
+        // 碰墙就反向
+        t.dx = -t.dx;
+        t.dy = -t.dy;
         t.steps = 0;
       } else {
-        t.x = nx; t.y = ny;
+        t.x = nx;
+        t.y = ny;
         t.steps++;
-        if(t.steps >= t.maxSteps) {
-          t.dx = -t.dx; t.dy = -t.dy;
+        if (t.steps >= t.maxSteps) {
+          t.dx = -t.dx;
+          t.dy = -t.dy;
           t.steps = 0;
         }
       }
     });
   }
 
-  // ===== 碰到老师 =====
+  // ===== 检测与老师碰撞 =====
   function checkTeacherCollision() {
-    if(invincible) return;
-    for(let t of teachers) {
-      if(t.x === player.x && t.y === player.y) {
+    if (invincible) return;
+    for (let t of teachers) {
+      if (t.x === player.x && t.y === player.y) {
         lives--;
         updateHUD();
-        invincible = true; invincibleTimer = 90;
-        if(lives <= 0) {
+        invincible = true;
+        invincibleTimer = 90;
+        if (lives <= 0) {
           gameRunning = false;
           showMessage(
             '💔 游戏结束',
             '被老师抓住太多次了...<br>不要灰心，再试一次！',
             '重新开始！',
-            function(){
-              currentLevel = 0; lives = 3;
-              initLevel(0); gameRunning = true;
+            function() {
+              currentLevel = 0;
+              lives = 3;
+              initLevel(0);
+              startGameLoop();
             }
           );
         } else {
-          showSign('💥 被老师抓住！剩余 '+lives+' 条命！');
+          showSign('💥 被老师抓住！剩余 ' + lives + ' 条命！');
         }
         break;
       }
     }
   }
 
+  // ===================================================
   // ===== 绘制函数 =====
+  // ===================================================
 
   function drawFloor() {
-    for(let r=0;r<ROWS;r++) {
-      for(let c=0;c<COLS;c++) {
-        ctx.fillStyle = ((r+c)%2===0) ? COLORS.floor[0] : COLORS.floor[1];
-        ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        ctx.fillStyle = ((r + c) % 2 === 0) ? COLORS.floor[0] : COLORS.floor[1];
+        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
       }
     }
   }
 
   function drawWall(c, r) {
-    const x = c*TILE, y = r*TILE;
+    const x = c * TILE, y = r * TILE;
     ctx.fillStyle = COLORS.wall;
-    ctx.fillRect(x+2, y+2, TILE-4, TILE-4);
+    ctx.fillRect(x + 2, y + 2, TILE - 4, TILE - 4);
     ctx.fillStyle = COLORS.wallTop;
-    ctx.fillRect(x+2, y+2, TILE-4, 8);
+    ctx.fillRect(x + 2, y + 2, TILE - 4, 8);
     ctx.fillStyle = COLORS.wallShadow;
-    ctx.fillRect(x+TILE-6, y+2, 4, TILE-4);
-    ctx.fillRect(x+2, y+TILE-6, TILE-4, 4);
+    ctx.fillRect(x + TILE - 6, y + 2, 4, TILE - 4);
+    ctx.fillRect(x + 2, y + TILE - 6, TILE - 4, 4);
     ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x+TILE/2, y+2); ctx.lineTo(x+TILE/2, y+TILE-6);
-    ctx.moveTo(x+2, y+TILE/2); ctx.lineTo(x+TILE-6, y+TILE/2);
+    ctx.moveTo(x + TILE / 2, y + 2);
+    ctx.lineTo(x + TILE / 2, y + TILE - 6);
+    ctx.moveTo(x + 2, y + TILE / 2);
+    ctx.lineTo(x + TILE - 6, y + TILE / 2);
     ctx.stroke();
   }
 
   function drawKey(c, r) {
-    const x = c*TILE + TILE/2, y = r*TILE + TILE/2;
-    const bob = Math.sin(frameCount*0.08)*3;
+    const x = c * TILE + TILE / 2;
+    const y = r * TILE + TILE / 2;
+    const bob = Math.sin(frameCount * 0.08) * 3;
     ctx.save();
-    ctx.translate(x, y+bob);
-    ctx.globalAlpha = 0.3 + 0.2*Math.sin(frameCount*0.1);
+    ctx.translate(x, y + bob);
+    // 发光光晕
+    ctx.globalAlpha = 0.3 + 0.2 * Math.sin(frameCount * 0.1);
     ctx.fillStyle = '#FDCB6E';
-    ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.fill();
     ctx.globalAlpha = 1;
+    // 钥匙圆头
     ctx.fillStyle = '#FDCB6E';
-    ctx.strokeStyle = '#E17055'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(-4, -2, 8, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.arc(-4, -2, 4, 0, Math.PI*2);
-    ctx.fillStyle = '#FFF3CC'; ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#E17055';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(-4, -2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // 钥匙圆孔
+    ctx.beginPath();
+    ctx.arc(-4, -2, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFF3CC';
+    ctx.fill();
+    ctx.stroke();
+    // 钥匙柄
     ctx.fillStyle = '#FDCB6E';
-    ctx.beginPath(); ctx.rect(2, -4, 14, 5); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.rect(12, -4, 3, 7); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.rect(8, -4, 3, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(2, -4, 14, 5);
+    ctx.fill();
+    ctx.stroke();
+    // 钥匙齿
+    ctx.beginPath();
+    ctx.rect(12, -4, 3, 7);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(8, -4, 3, 7);
+    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 
   function drawDoor(c, r) {
-    const x = c*TILE, y = r*TILE;
-    const locked = keysCollected < 5;
-    ctx.fillStyle = locked ? '#636E72' : '#00B894';
-    ctx.fillRect(x+2, y+2, TILE-4, TILE-4);
-    ctx.fillStyle = locked ? '#B2BEC3' : '#55EFC4';
-    ctx.fillRect(x+6, y+6, TILE-12, TILE-12);
-    ctx.fillStyle = locked ? '#636E72' : '#FDCB6E';
-    ctx.beginPath(); ctx.arc(x+TILE-14, y+TILE/2, 4, 0, Math.PI*2); ctx.fill();
-    ctx.font = '18px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(locked ? '🔒' : '📚', x+TILE/2, y+TILE/2);
-  }
-
-  function drawSign(c, r) {
-    const x = c*TILE, y = r*TILE;
-    ctx.fillStyle = '#FD79A8';
-    ctx.beginPath();
-    ctx.roundRect(x+4, y+4, TILE-8, TILE-10, 4);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = '20px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('📌', x+TILE/2, y+TILE/2-2);
-    ctx.fillStyle = '#636E72';
-    ctx.fillRect(x+TILE/2-2, y+TILE-10, 4, 10);
-  }
-
-  function drawPlayer() {
-    const x = player.x*TILE + TILE/2;
-    const y = player.y*TILE + TILE/2;
-    if(invincible && frameCount%6 < 3) return; // 无敌时闪烁
-    ctx.save();
-    ctx.translate(x, y);
-    // 阴影
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.beginPath(); ctx.ellipse(0, 14, 10, 4, 0, 0, Math.PI*2); ctx.fill
+    const x
