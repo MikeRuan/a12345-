@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LA Property Agent - Catch the Right Clients!</title>
+<title>LA Life Insurance Agent 🎯</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     font-family: 'Arial', sans-serif;
     background: #87CEEB;
@@ -14,15 +13,12 @@
     width: 100vw;
     height: 100vh;
   }
-
   #gameContainer {
     position: relative;
     width: 100vw;
     height: 100vh;
     overflow: hidden;
   }
-
-  /* ── START SCREEN ── */
   #startScreen {
     position: absolute;
     z-index: 100;
@@ -35,41 +31,42 @@
     justify-content: center;
     pointer-events: auto;
   }
-
   #startScreen h1 {
-    font-size: 2.4em;
+    font-size: 2.2em;
     color: #FFD700;
     text-shadow: 3px 3px 6px #000;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  #startScreen h2 {
+    font-size: 1.1em;
+    color: #aef;
     margin-bottom: 10px;
     text-align: center;
   }
-
   #startScreen p {
     color: #fff;
-    font-size: 1em;
-    margin: 6px 20px;
+    font-size: 0.95em;
+    margin: 4px 20px;
     text-align: center;
-    max-width: 400px;
+    max-width: 420px;
   }
-
   .rules-box {
     background: rgba(255,255,255,0.1);
     border: 2px solid #FFD700;
     border-radius: 12px;
-    padding: 16px 22px;
-    margin: 14px 20px;
-    max-width: 420px;
+    padding: 14px 20px;
+    margin: 12px 20px;
+    max-width: 440px;
     color: #fff;
-    font-size: 0.9em;
-    line-height: 1.7;
+    font-size: 0.88em;
+    line-height: 1.75;
   }
-
   .rules-box span.good { color: #7FFF00; font-weight: bold; }
   .rules-box span.bad  { color: #FF6B6B; font-weight: bold; }
-
   #startBtn {
-    margin-top: 18px;
-    padding: 14px 42px;
+    margin-top: 16px;
+    padding: 14px 44px;
     font-size: 1.3em;
     font-weight: bold;
     background: linear-gradient(135deg, #FFD700, #FFA500);
@@ -80,19 +77,18 @@
     box-shadow: 0 6px 20px rgba(255,165,0,0.5);
     transition: transform 0.15s;
   }
-  #startBtn:hover { transform: scale(1.06); }
+  #startBtn:hover { transform: scale(1.07); }
 
-  /* ── CANVAS ── */
   #gameCanvas {
     position: absolute;
     z-index: 1;
     top: 0; left: 0;
     display: none;
-    cursor: none; /* hide default cursor — we draw our own */
+    cursor: none;
   }
 
-  /* ── REWARD SCREEN ── */
-  #rewardScreen {
+  /* ── CUTSCENE SCREEN ── */
+  #cutsceneScreen {
     position: absolute;
     z-index: 200;
     width: 100%;
@@ -102,42 +98,127 @@
     align-items: center;
     justify-content: center;
     pointer-events: auto;
+    background: rgba(0,0,0,0.7);
   }
-
-  #rewardContent {
-    background: rgba(255,255,255,0.95);
-    border-radius: 20px;
-    padding: 30px 40px;
+  #cutsceneBox {
+    background: #fffbe6;
+    border-radius: 22px;
+    padding: 32px 40px;
     text-align: center;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    max-width: 380px;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+    max-width: 420px;
     animation: popIn 0.5s ease;
+    position: relative;
+    overflow: hidden;
   }
-
-  @keyframes popIn {
-    0%   { transform: scale(0.3); opacity: 0; }
-    80%  { transform: scale(1.05); }
-    100% { transform: scale(1); opacity: 1; }
+  #cutsceneTitle {
+    font-size: 1.7em;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
   }
-
-  #rewardEmoji { font-size: 5em; margin-bottom: 10px; display: block; }
-  #rewardTitle { font-size: 1.8em; font-weight: bold; color: #333; margin-bottom: 8px; }
-  #rewardDesc  { font-size: 1em; color: #555; margin-bottom: 20px; line-height: 1.5; }
-
-  #nextBtn {
-    padding: 12px 36px;
-    font-size: 1.1em;
+  #cutsceneAnim {
+    font-size: 4em;
+    margin: 10px 0;
+    display: block;
+    animation: bounce 0.4s infinite alternate;
+  }
+  @keyframes bounce {
+    from { transform: scale(1); }
+    to   { transform: scale(1.15) rotate(5deg); }
+  }
+  #cutsceneDesc {
+    font-size: 1em;
+    color: #555;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+  #cutsceneProgressBar {
+    width: 100%;
+    height: 18px;
+    background: #eee;
+    border-radius: 9px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  #cutsceneProgressFill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #FFD700, #FF6600);
+    border-radius: 9px;
+    transition: width 0.08s linear;
+  }
+  #cutsceneSkipBtn {
+    padding: 10px 30px;
+    font-size: 1em;
     font-weight: bold;
     background: linear-gradient(135deg, #4CAF50, #2e7d32);
     color: #fff;
     border: none;
-    border-radius: 25px;
+    border-radius: 20px;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(76,175,80,0.5);
+    box-shadow: 0 4px 12px rgba(76,175,80,0.4);
     transition: transform 0.15s;
     pointer-events: auto;
   }
-  #nextBtn:hover { transform: scale(1.06); }
+  #cutsceneSkipBtn:hover { transform: scale(1.07); }
+
+  /* ── TREASURE SCREEN ── */
+  #treasureScreen {
+    position: absolute;
+    z-index: 210;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    background: radial-gradient(ellipse at center, #ffe066 0%, #ff9900 60%, #cc5500 100%);
+    overflow: hidden;
+  }
+  #treasureTitle {
+    font-size: 3em;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 3px 3px 8px #a00;
+    margin-bottom: 20px;
+    text-align: center;
+    z-index: 5;
+    animation: shake 0.3s infinite alternate;
+  }
+  @keyframes shake {
+    from { transform: rotate(-2deg) scale(1.0); }
+    to   { transform: rotate(2deg) scale(1.05); }
+  }
+  #treasureEmojis {
+    font-size: 2.5em;
+    z-index: 5;
+    text-align: center;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  #treasureNextBtn {
+    padding: 14px 44px;
+    font-size: 1.2em;
+    font-weight: bold;
+    background: linear-gradient(135deg, #fff, #ffe066);
+    color: #c00;
+    border: none;
+    border-radius: 28px;
+    cursor: pointer;
+    z-index: 5;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    transition: transform 0.15s;
+    pointer-events: auto;
+  }
+  #treasureNextBtn:hover { transform: scale(1.07); }
+  #treasureCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
 
   /* ── FAIL SCREEN ── */
   #failScreen {
@@ -150,10 +231,9 @@
     align-items: center;
     justify-content: center;
     pointer-events: auto;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.6);
   }
-
-  #failContent {
+  #failBox {
     background: #fff;
     border-radius: 20px;
     padding: 30px 40px;
@@ -162,25 +242,44 @@
     max-width: 360px;
     animation: popIn 0.5s ease;
   }
-
-  #failEmoji  { font-size: 4em; display: block; margin-bottom: 8px; }
-  #failTitle  { font-size: 1.7em; font-weight: bold; color: #c62828; margin-bottom: 8px; }
-  #failDesc   { font-size: 1em; color: #555; margin-bottom: 20px; }
-
-  #retryBtn {
-    padding: 12px 36px;
-    font-size: 1.1em;
+  #failAnim { font-size: 3.5em; display: block; margin-bottom: 8px; animation: bounce 0.5s infinite alternate; }
+  #failTitle { font-size: 1.7em; font-weight: bold; color: #c62828; margin-bottom: 8px; }
+  #failDesc { font-size: 0.95em; color: #555; margin-bottom: 12px; }
+  #failProgressBar {
+    width: 100%;
+    height: 16px;
+    background: #eee;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  #failProgressFill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #7ec850, #2e7d32);
+    border-radius: 8px;
+    transition: width 0.08s linear;
+  }
+  #failRetryBtn {
+    padding: 11px 34px;
+    font-size: 1em;
     font-weight: bold;
     background: linear-gradient(135deg, #e53935, #b71c1c);
     color: #fff;
     border: none;
-    border-radius: 25px;
+    border-radius: 22px;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(229,57,53,0.5);
     transition: transform 0.15s;
     pointer-events: auto;
   }
-  #retryBtn:hover { transform: scale(1.06); }
+  #failRetryBtn:hover { transform: scale(1.07); }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.3); opacity: 0; }
+    80%  { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
 
   /* ── HUD ── */
   #hud {
@@ -196,7 +295,6 @@
     align-items: center;
     pointer-events: none;
   }
-
   #hud span { font-weight: bold; }
   #hud .score-good { color: #7FFF00; }
   #hud .score-bad  { color: #FF6B6B; }
@@ -213,116 +311,113 @@
     pointer-events: none;
     display: none;
     white-space: nowrap;
-    transition: opacity 0.2s;
   }
 </style>
 </head>
 <body>
-
 <div id="gameContainer">
-
-  <!-- Canvas (behind everything at start) -->
   <canvas id="gameCanvas"></canvas>
 
-  <!-- HUD -->
   <div id="hud">
     <div>🏙️ <span id="levelLabel">Level 1</span></div>
-    <div>⭐ Score: <span id="scoreLabel" class="score-good">0</span> / 5</div>
+    <div>⭐ <span id="scoreLabel" class="score-good">0</span> / 5</div>
     <div>⏱️ <span id="timerLabel">30s</span></div>
   </div>
 
-  <!-- Tooltip -->
   <div id="tooltip"></div>
 
   <!-- START SCREEN -->
   <div id="startScreen">
-    <h1>🏘️ LA Property Agent</h1>
-    <p>You're a property agent in a small LA city.<br>Find the RIGHT clients — close the deal!</p>
+    <h1>🏘️ LA保险经纪人</h1>
+    <h2>Life Insurance Agent's Day in LA!</h2>
+    <p>抓住合适的客户，签保险！</p>
     <div class="rules-box">
-      <b>✅ Good clients (+1 pt):</b><br>
-      <span class="good">Business people, office workers, families, couples</span><br><br>
-      <b>❌ Wrong targets (−1 pt):</b><br>
-      <span class="bad">Kids 👦, Tourists 📸, Beggars 🧤</span><br><br>
-      🖱️ <b>Hold mouse button</b> to grab a person — drag &amp; release!<br><br>
-      🎯 Reach <b>5 points</b> before time runs out to pass!<br>
-      🏆 <b>Level 1</b> → 🍔 Burger reward<br>
-      🏆 <b>Level 2</b> → 🍽️ Restaurant dinner<br>
-      🏆 <b>Level 3</b> → 🏠 House reward<br>
-      💀 Fail → Eat grass on the roadside 🌿
+      <b>✅ 好客户 (+1分)：</b><br>
+      <span class="good">商人��、上班族📋、家庭👨‍👩‍👧、情侣💕</span><br><br>
+      <b>❌ 错误目标 (−1分)：</b><br>
+      <span class="bad">小孩👦、游客📸、乞丐🧤</span><br><br>
+      🖱️ <b>点击人物</b>即可抓取！<br>
+      🎯 达到 <b>5分</b> 即可过关！<br><br>
+      🏆 第1关 → 大口吃汉堡 🍔<br>
+      🏆 第2关 → 大口吃面条 🍜<br>
+      🏆 第3关 → 满屏金银财宝 💰<br>
+      💀 失败 → 坐在路边吃草 🌿
     </div>
-    <button id="startBtn">🚀 Start Game!</button>
+    <button id="startBtn">🚀 开始游戏！</button>
   </div>
 
-  <!-- REWARD SCREEN -->
-  <div id="rewardScreen">
-    <div id="rewardContent">
-      <span id="rewardEmoji">🏆</span>
-      <div id="rewardTitle">Level Complete!</div>
-      <div id="rewardDesc">You earned a reward!</div>
-      <button id="nextBtn">Next Level ▶</button>
+  <!-- CUTSCENE SCREEN (win) -->
+  <div id="cutsceneScreen">
+    <div id="cutsceneBox">
+      <div id="cutsceneTitle">🎉 过关啦！</div>
+      <span id="cutsceneAnim">🍔</span>
+      <div id="cutsceneDesc">经纪人大口享用美食中...</div>
+      <div id="cutsceneProgressBar"><div id="cutsceneProgressFill"></div></div>
+      <button id="cutsceneSkipBtn">跳过 ▶</button>
     </div>
+  </div>
+
+  <!-- TREASURE SCREEN (level 3 win) -->
+  <div id="treasureScreen">
+    <canvas id="treasureCanvas"></canvas>
+    <div id="treasureTitle">💰 LEGENDARY！💰<br>满屏金银财宝！</div>
+    <div id="treasureEmojis">💎💰🪙👑🏆💍✨🎊💵🌟</div>
+    <button id="treasureNextBtn">🎆 继续 ▶</button>
   </div>
 
   <!-- FAIL SCREEN -->
   <div id="failScreen">
-    <div id="failContent">
-      <span id="failEmoji">🌿</span>
-      <div id="failTitle">Mission Failed!</div>
-      <div id="failDesc">No deals today... you're eating grass by the roadside.</div>
-      <button id="retryBtn">Try Again 🔄</button>
+    <div id="failBox">
+      <span id="failAnim">🌿</span>
+      <div id="failTitle">今天颗粒无收...</div>
+      <div id="failDesc">坐在路边吃草中... 嚼嚼嚼！🐑</div>
+      <div id="failProgressBar"><div id="failProgressFill"></div></div>
+      <button id="failRetryBtn">再试一次 🔄</button>
     </div>
   </div>
-
-</div><!-- end gameContainer -->
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // ─────────────────────────────────────────
-  //  DOM REFERENCES
-  // ─────────────────────────────────────────
-  const startScreen  = document.getElementById('startScreen');
-  const rewardScreen = document.getElementById('rewardScreen');
-  const failScreen   = document.getElementById('failScreen');
-  const hud          = document.getElementById('hud');
-  const canvas       = document.getElementById('gameCanvas');
-  const ctx          = canvas.getContext('2d');
-  const tooltip      = document.getElementById('tooltip');
+  // ── DOM REFS ──
+  const startScreen    = document.getElementById('startScreen');
+  const cutsceneScreen = document.getElementById('cutsceneScreen');
+  const treasureScreen = document.getElementById('treasureScreen');
+  const failScreen     = document.getElementById('failScreen');
+  const hud            = document.getElementById('hud');
+  const canvas         = document.getElementById('gameCanvas');
+  const ctx            = canvas.getContext('2d');
+  const tooltip        = document.getElementById('tooltip');
 
-  const startBtn  = document.getElementById('startBtn');
-  const nextBtn   = document.getElementById('nextBtn');
-  const retryBtn  = document.getElementById('retryBtn');
+  const startBtn        = document.getElementById('startBtn');
+  const cutsceneSkipBtn = document.getElementById('cutsceneSkipBtn');
+  const treasureNextBtn = document.getElementById('treasureNextBtn');
+  const failRetryBtn    = document.getElementById('failRetryBtn');
 
   const levelLabel = document.getElementById('levelLabel');
   const scoreLabel = document.getElementById('scoreLabel');
   const timerLabel = document.getElementById('timerLabel');
 
-  // ─────────────────────────────────────────
-  //  GAME STATE
-  // ─────────────────────────────────────────
-  let level      = 1;
-  let score      = 0;
-  let timeLeft   = 30;
-  let timerID    = null;
-  let running    = false;
-  let people     = [];
-  let vehicles   = [];
-  let buildings  = [];
-  let clouds     = [];
-  let animFrame  = null;
-
-  // Mouse state
+  // ── GAME STATE ──
+  let level     = 1;
+  let score     = 0;
+  let timeLeft  = 30;
+  let timerID   = null;
+  let running   = false;
+  let people    = [];
+  let vehicles  = [];
+  let buildings = [];
+  let clouds    = [];
+  let animFrame = null;
+  let walkTick  = 0;
   let mouseX = -999, mouseY = -999;
-  let mouseDown = false;
-  let grabbed = null;   // the person being dragged
-  let grabOffX = 0, grabOffY = 0;
 
-  // Walk animation tick
-  let walkTick = 0;
+  // Spawn intervals
+  let spawnPeopleID = null;
+  let spawnCarID    = null;
 
-  // ─────────────────────────────────────────
-  //  CANVAS RESIZE
-  // ─────────────────────────────────────────
+  // ── CANVAS RESIZE ──
   function resizeCanvas() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -330,89 +425,62 @@ document.addEventListener('DOMContentLoaded', function() {
   resizeCanvas();
   window.addEventListener('resize', () => { resizeCanvas(); buildScene(); });
 
-  // ─────────────────────────────────────────
-  //  PERSON TYPES
-  // ─────────────────────────────────────────
-  // Each type carries body-color info for our stick-figure drawing
+  // ── GROUND Y ──
+  const groundY = () => canvas.height * 0.63;
+
+  // ── PERSON TYPES ──
   const PERSON_TYPES = [
-    { type:'business', label:'Business Person', emoji:'💼', good:true,  shirtColor:'#2c3e50', pantColor:'#1a252f', skinColor:'#f0c27f', hatEmoji:'🎩' },
-    { type:'worker',   label:'Office Worker',   emoji:'📋', good:true,  shirtColor:'#2980b9', pantColor:'#1a5276', skinColor:'#f0c27f', hatEmoji:null   },
-    { type:'family',   label:'Family',          emoji:'👨‍👩‍👧', good:true,  shirtColor:'#27ae60', pantColor:'#1e8449', skinColor:'#f5cba7', hatEmoji:null   },
-    { type:'couple',   label:'Couple',          emoji:'💕', good:true,  shirtColor:'#8e44ad', pantColor:'#6c3483', skinColor:'#fad7a0', hatEmoji:null   },
-    { type:'kid',      label:'Kid',             emoji:'🎒', good:false, shirtColor:'#e74c3c', pantColor:'#a93226', skinColor:'#f9e4b7', hatEmoji:'🧢'  },
-    { type:'tourist',  label:'Tourist',         emoji:'📸', good:false, shirtColor:'#e67e22', pantColor:'#ca6f1e', skinColor:'#fdebd0', hatEmoji:'👒'  },
-    { type:'beggar',   label:'Beggar',          emoji:'🧤', good:false, shirtColor:'#7f8c8d', pantColor:'#515a5a', skinColor:'#d5b59e', hatEmoji:null   },
+    { type:'business', label:'商人',   emoji:'💼', good:true,  shirtColor:'#2c3e50', pantColor:'#1a252f', skinColor:'#f0c27f', hatEmoji:'🎩', female:false },
+    { type:'worker',   label:'上班族', emoji:'📋', good:true,  shirtColor:'#2980b9', pantColor:'#1a5276', skinColor:'#f0c27f', hatEmoji:null,  female:false },
+    { type:'family',   label:'家庭',   emoji:'👨‍👩‍👧', good:true,  shirtColor:'#27ae60', pantColor:'#1e8449', skinColor:'#f5cba7', hatEmoji:null,  female:false },
+    { type:'couple',   label:'情侣',   emoji:'💕', good:true,  shirtColor:'#8e44ad', pantColor:'#6c3483', skinColor:'#fad7a0', hatEmoji:null,  female:true  },
+    { type:'kid',      label:'小孩',   emoji:'🎒', good:false, shirtColor:'#e74c3c', pantColor:'#a93226', skinColor:'#f9e4b7', hatEmoji:'🧢',  female:false },
+    { type:'tourist',  label:'游客',   emoji:'📸', good:false, shirtColor:'#e67e22', pantColor:'#ca6f1e', skinColor:'#fdebd0', hatEmoji:'👒',  female:false },
+    { type:'beggar',   label:'乞丐',   emoji:'🧤', good:false, shirtColor:'#7f8c8d', pantColor:'#515a5a', skinColor:'#d5b59e', hatEmoji:null,  female:false },
   ];
 
-  // ─────────────────────────────────────────
-  //  BUILDING DEFINITIONS
-  // ─────────────────────────────────────────
+  // ── BUILDING DEFS ──
   const BUILDING_TYPES = [
-    { name:'House',       color:'#e8a87c', roofColor:'#c0392b', emoji:'🏠', w:70,  h:70  },
-    { name:'Burger Shop', color:'#f39c12', roofColor:'#d35400', emoji:'🍔', w:80,  h:80  },
-    { name:'Restaurant',  color:'#9b59b6', roofColor:'#6c3483', emoji:'🍽️',  w:90,  h:90  },
-    { name:'Office',      color:'#2980b9', roofColor:'#1a5276', emoji:'🏢', w:65,  h:110 },
-    { name:'House',       color:'#a8d8ea', roofColor:'#e74c3c', emoji:'🏠', w:70,  h:70  },
-    { name:'Office',      color:'#27ae60', roofColor:'#145a32', emoji:'🏢', w:65,  h:100 },
+    { name:'民宅',   color:'#e8a87c', roofColor:'#c0392b', emoji:'🏠', w:72,  h:75  },
+    { name:'汉堡店', color:'#f39c12', roofColor:'#d35400', emoji:'🍔', w:82,  h:85  },
+    { name:'餐厅',   color:'#9b59b6', roofColor:'#6c3483', emoji:'🍽️',  w:90,  h:92  },
+    { name:'办公楼', color:'#2980b9', roofColor:'#1a5276', emoji:'🏢', w:66,  h:115 },
+    { name:'民宅',   color:'#a8d8ea', roofColor:'#e74c3c', emoji:'🏠', w:72,  h:72  },
+    { name:'办公楼', color:'#27ae60', roofColor:'#145a32', emoji:'🏢', w:66,  h:105 },
   ];
 
-  // ─────────────────────────────────────────
-  //  SCENE SETUP
-  // ─────────────────────────────────────────
+  // ── BUILD SCENE ──
   function buildScene() {
     buildings = [];
     clouds    = [];
-
-    const groundY  = canvas.height * 0.62;
-    const bldCount = 7;
-    const spacing  = canvas.width / (bldCount + 1);
-
-    for (let i = 0; i < bldCount; i++) {
-      const btype = BUILDING_TYPES[i % BUILDING_TYPES.length];
-      const bx    = spacing * (i + 1);
-      buildings.push({
-        x: bx, y: groundY,
-        w: btype.w, h: btype.h,
-        color: btype.color, roofColor: btype.roofColor,
-        emoji: btype.emoji, name: btype.name
-      });
+    const gy  = groundY();
+    const cnt = 7;
+    const sp  = canvas.width / (cnt + 1);
+    for (let i = 0; i < cnt; i++) {
+      const bt = BUILDING_TYPES[i % BUILDING_TYPES.length];
+      buildings.push({ x: sp*(i+1), y: gy, w:bt.w, h:bt.h, color:bt.color, roofColor:bt.roofColor, emoji:bt.emoji, name:bt.name });
     }
-
     for (let i = 0; i < 5; i++) {
-      clouds.push({
-        x:     Math.random() * canvas.width,
-        y:     40 + Math.random() * 80,
-        r:     35 + Math.random() * 30,
-        speed: 0.3 + Math.random() * 0.3
-      });
+      clouds.push({ x: Math.random()*canvas.width, y: 40+Math.random()*80, r: 35+Math.random()*30, speed: 0.3+Math.random()*0.3 });
     }
   }
 
-  // ─────────────────────────────────────────
-  //  GROUND Y helper
-  // ─────────────────────────────────────────
-  const groundY = () => canvas.height * 0.62;
-
-  // ─────────────────────────────────────────
-  //  SPAWN PEOPLE  — now with walk-phase
-  // ─────────────────────────────────────────
+  // ── SPAWN PERSON ──
   function spawnPerson() {
     if (!running) return;
     const tdata    = PERSON_TYPES[Math.floor(Math.random() * PERSON_TYPES.length)];
     const fromLeft = Math.random() < 0.5;
-    // Scale person size based on canvas height so it looks right on all screens
-    const personH  = Math.max(48, canvas.height * 0.085); // total height of figure
-    const speed    = 0.6 + Math.random() * 0.8;
-
+    const personH  = Math.max(52, canvas.height * 0.09);
+    const speed    = 0.55 + Math.random() * 0.75 + (level - 1) * 0.2;
     people.push({
-      x:        fromLeft ? -40 : canvas.width + 40,
-      baseY:    groundY(),          // feet stand on this line
-      vx:       fromLeft ? speed : -speed,
-      personH:  personH,            // total figure height
-      walkPhase: Math.random() * Math.PI * 2, // so they don't all step together
+      x:         fromLeft ? -40 : canvas.width + 40,
+      baseY:     groundY(),
+      vx:        fromLeft ? speed : -speed,
+      personH:   personH,
+      walkPhase: Math.random() * Math.PI * 2,
       ...tdata,
-      grabbed:  false,
-      flash:    0,
+      clicked:   false,
+      flash:     0,
       flashGood: true,
     });
   }
@@ -420,19 +488,17 @@ document.addEventListener('DOMContentLoaded', function() {
   function spawnVehicle() {
     if (!running) return;
     const fromLeft = Math.random() < 0.5;
-    const types = ['🚗','🚙','🚐','🚕'];
+    const types = ['🚗','🚙','🚐','🚕','🚌'];
     vehicles.push({
       x:     fromLeft ? -60 : canvas.width + 60,
       y:     groundY() - 24,
-      vx:    fromLeft ? 2.5 + Math.random() : -(2.5 + Math.random()),
-      emoji: types[Math.floor(Math.random() * types.length)],
-      size:  34,
+      vx:    fromLeft ? 2.5+Math.random() : -(2.5+Math.random()),
+      emoji: types[Math.floor(Math.random()*types.length)],
+      size:  36,
     });
   }
 
-  // ─────────────────────────────────────────
-  //  DRAW HELPERS
-  // ─────────────────────────────────────────
+  // ── DRAW BACKGROUND ──
   function drawBackground() {
     const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.65);
     skyGrad.addColorStop(0, '#87CEEB');
@@ -467,9 +533,9 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.fillStyle = '#fff';
     clouds.forEach(c => {
       ctx.beginPath();
-      ctx.arc(c.x,           c.y,          c.r,       0, Math.PI*2);
-      ctx.arc(c.x+c.r*0.7,  c.y-c.r*0.3,  c.r*0.7,   0, Math.PI*2);
-      ctx.arc(c.x-c.r*0.6,  c.y-c.r*0.2,  c.r*0.6,   0, Math.PI*2);
+      ctx.arc(c.x,          c.y,          c.r,     0, Math.PI*2);
+      ctx.arc(c.x+c.r*0.7,  c.y-c.r*0.3,  c.r*0.7, 0, Math.PI*2);
+      ctx.arc(c.x-c.r*0.6,  c.y-c.r*0.2,  c.r*0.6, 0, Math.PI*2);
       ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -479,148 +545,163 @@ document.addEventListener('DOMContentLoaded', function() {
   function drawBuilding(b) {
     ctx.fillStyle = b.color;
     ctx.fillRect(b.x - b.w/2, b.y - b.h, b.w, b.h);
-
     ctx.fillStyle = b.roofColor;
     ctx.beginPath();
     ctx.moveTo(b.x - b.w/2 - 6, b.y - b.h);
-    ctx.lineTo(b.x,               b.y - b.h - 26);
-    ctx.lineTo(b.x + b.w/2 + 6,  b.y - b.h);
+    ctx.lineTo(b.x,              b.y - b.h - 28);
+    ctx.lineTo(b.x + b.w/2 + 6, b.y - b.h);
     ctx.closePath();
     ctx.fill();
-
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     for (let row = 0; row < 2; row++) {
       for (let col = 0; col < 2; col++) {
-        ctx.fillRect(
-          b.x - b.w/2 + 8 + col * (b.w/2 - 4),
-          b.y - b.h + 12 + row * 22,
-          b.w/2 - 14, 14
-        );
+        ctx.fillRect(b.x - b.w/2 + 8 + col*(b.w/2 - 4), b.y - b.h + 12 + row*22, b.w/2 - 14, 14);
       }
     }
-
     ctx.fillStyle = '#5d4037';
     ctx.fillRect(b.x - 10, b.y - 22, 20, 22);
-
     ctx.font = '18px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(b.emoji, b.x, b.y - b.h - 32);
-
+    ctx.fillText(b.emoji, b.x, b.y - b.h - 34);
     ctx.font = 'bold 10px Arial';
     ctx.fillStyle = '#333';
     ctx.fillText(b.name, b.x, b.y + 11);
   }
 
-  // ─────────────────────────────────────────
-  //  DRAW STICK PERSON  (the new human shape)
-  // ─────────────────────────────────────────
-  /*
-    Proportions (all relative to personH = total height):
-      head radius = H * 0.13
-      neck-top (shoulder Y) = -H + headR*2 + H*0.04
-      torso bottom = shoulder + H*0.38
-      legs bottom = baseY (= 0 in local coords, feet on ground)
-      arms swing with walk phase
-      legs swing with walk phase
-  */
+  // ── DRAW STICK PERSON ──
   function drawPerson(p) {
-    const H    = p.personH;
-    const feetY = p.grabbed ? p.baseY : p.baseY;  // feet Y in world space
-    const cx   = p.x;
+    const H = p.personH;
+    const feetY = p.baseY;
+    const cx    = p.x;
 
     ctx.save();
-    ctx.translate(cx, feetY);   // origin = feet on ground
+    ctx.translate(cx, feetY);
 
-    // flash tint
+    // flash effect
     if (p.flash > 0) {
-      ctx.globalAlpha = 0.55 + 0.45 * Math.sin(p.flash * 0.9);
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(p.flash * 1.1);
     }
 
-    // ── proportions ──
-    const headR    = H * 0.13;
-    const shoulderY = -(H - headR * 2 - H * 0.04);  // negative = up
+    const headR     = H * 0.13;
+    const shoulderY = -(H - headR*2 - H*0.04);
     const hipY      = shoulderY + H * 0.38;
-    const torsoMidX = 0;
-    const legLen    = Math.abs(hipY);   // from hip to feet (y=0)
-    const armLen    = H * 0.26;
+    const legLen    = Math.abs(hipY);
+    const armLen    = H * 0.25;
+    const torsoW    = H * 0.22;
 
-    // walk animation — swing legs/arms
-    const phase    = p.walkPhase + walkTick * 0.05 * (p.grabbed ? 0 : 1);
-    const legSwing = Math.sin(phase) * 14;      // degrees in canvas units
-    const armSwing = -Math.sin(phase) * 10;
+    const phase    = p.walkPhase + walkTick * 0.055;
+    const legSwing = Math.sin(phase) * 13;
+    const armSwing = -Math.sin(phase) * 9;
 
-    // Direction flip so person faces the way they walk
     const facingRight = p.vx >= 0;
     if (!facingRight) ctx.scale(-1, 1);
 
-    // ── shadow ──
+    // shadow
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.beginPath();
-    ctx.ellipse(0, 2, H * 0.18, 5, 0, 0, Math.PI*2);
+    ctx.ellipse(0, 3, H*0.18, 5, 0, 0, Math.PI*2);
     ctx.fill();
 
     // ── legs ──
-    ctx.lineWidth = Math.max(3, H * 0.07);
+    ctx.lineWidth = Math.max(3, H * 0.068);
     ctx.lineCap   = 'round';
     ctx.strokeStyle = p.pantColor;
 
-    // left leg
-    ctx.beginPath();
-    ctx.moveTo(torsoMidX, hipY);
-    ctx.lineTo(torsoMidX - legSwing * 0.5, hipY + legLen * 0.5);
-    ctx.lineTo(torsoMidX - legSwing,        0);
-    ctx.stroke();
-
-    // right leg
-    ctx.beginPath();
-    ctx.moveTo(torsoMidX, hipY);
-    ctx.lineTo(torsoMidX + legSwing * 0.5, hipY + legLen * 0.5);
-    ctx.lineTo(torsoMidX + legSwing,        0);
-    ctx.stroke();
+    // For female: draw skirt instead of pants
+    if (p.female) {
+      // skirt
+      ctx.fillStyle = '#e91e63';
+      ctx.beginPath();
+      ctx.moveTo(-torsoW/2, hipY - H*0.05);
+      ctx.lineTo(-torsoW*0.85, hipY + H*0.18);
+      ctx.lineTo(torsoW*0.85,  hipY + H*0.18);
+      ctx.lineTo(torsoW/2,     hipY - H*0.05);
+      ctx.closePath();
+      ctx.fill();
+      // legs below skirt
+      ctx.strokeStyle = p.skinColor;
+      ctx.lineWidth = Math.max(2.5, H*0.055);
+      ctx.beginPath();
+      ctx.moveTo(-torsoW*0.3, hipY + H*0.18);
+      ctx.lineTo(-torsoW*0.3 - legSwing*0.4, hipY + H*0.18 + legLen*0.5);
+      ctx.lineTo(-legSwing*0.6, 0);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(torsoW*0.3,  hipY + H*0.18);
+      ctx.lineTo(torsoW*0.3 + legSwing*0.4, hipY + H*0.18 + legLen*0.5);
+      ctx.lineTo(legSwing*0.6, 0);
+      ctx.stroke();
+    } else {
+      // left leg
+      ctx.beginPath();
+      ctx.moveTo(0, hipY);
+      ctx.lineTo(-legSwing*0.5, hipY + legLen*0.5);
+      ctx.lineTo(-legSwing, 0);
+      ctx.stroke();
+      // right leg
+      ctx.beginPath();
+      ctx.moveTo(0, hipY);
+      ctx.lineTo(legSwing*0.5, hipY + legLen*0.5);
+      ctx.lineTo(legSwing, 0);
+      ctx.stroke();
+    }
 
     // shoes
-    ctx.fillStyle = '#333';
+    ctx.fillStyle = p.female ? '#ff69b4' : '#333';
     ctx.beginPath();
-    ctx.ellipse(torsoMidX - legSwing + 3, 0, 6, 4, 0, 0, Math.PI*2);
+    ctx.ellipse(-legSwing + 3, -1, 7, 4, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(torsoMidX + legSwing + 3, 0, 6, 4, 0, 0, Math.PI*2);
+    ctx.ellipse(legSwing + 3, -1, 7, 4, 0, 0, Math.PI*2);
     ctx.fill();
 
     // ── torso ──
     ctx.fillStyle = p.shirtColor;
-    // draw a simple rounded rect for shirt
-    const torsoW = H * 0.22;
-    const torsoH = Math.abs(hipY - shoulderY);
     ctx.beginPath();
-    ctx.roundRect(torsoMidX - torsoW/2, shoulderY, torsoW, torsoH, 4);
+    ctx.roundRect(-torsoW/2, shoulderY, torsoW, Math.abs(hipY - shoulderY), 4);
     ctx.fill();
+
+    // collar / tie for business
+    if (p.type === 'business' || p.type === 'worker') {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(-torsoW*0.18, shoulderY);
+      ctx.lineTo(0, shoulderY + H*0.07);
+      ctx.lineTo(torsoW*0.18, shoulderY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.moveTo(-torsoW*0.08, shoulderY + H*0.07);
+      ctx.lineTo(0, hipY - H*0.04);
+      ctx.lineTo(torsoW*0.08, shoulderY + H*0.07);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     // ── arms ──
-    ctx.lineWidth = Math.max(2.5, H * 0.055);
+    ctx.lineWidth = Math.max(2.5, H*0.055);
     ctx.strokeStyle = p.shirtColor;
 
-    // left arm
     ctx.beginPath();
-    ctx.moveTo(torsoMidX - torsoW/2, shoulderY + 4);
-    ctx.lineTo(torsoMidX - torsoW/2 - armSwing,       shoulderY + armLen * 0.5);
-    ctx.lineTo(torsoMidX - torsoW/2 - armSwing * 0.6, shoulderY + armLen);
+    ctx.moveTo(-torsoW/2, shoulderY + 4);
+    ctx.lineTo(-torsoW/2 - armSwing,       shoulderY + armLen*0.5);
+    ctx.lineTo(-torsoW/2 - armSwing*0.6,   shoulderY + armLen);
     ctx.stroke();
 
-    // right arm
     ctx.beginPath();
-    ctx.moveTo(torsoMidX + torsoW/2, shoulderY + 4);
-    ctx.lineTo(torsoMidX + torsoW/2 + armSwing,       shoulderY + armLen * 0.5);
-    ctx.lineTo(torsoMidX + torsoW/2 + armSwing * 0.6, shoulderY + armLen);
+    ctx.moveTo(torsoW/2, shoulderY + 4);
+    ctx.lineTo(torsoW/2 + armSwing,        shoulderY + armLen*0.5);
+    ctx.lineTo(torsoW/2 + armSwing*0.6,    shoulderY + armLen);
     ctx.stroke();
 
-    // hands (small circles)
+    // hands
     ctx.fillStyle = p.skinColor;
     ctx.beginPath();
-    ctx.arc(torsoMidX - torsoW/2 - armSwing * 0.6, shoulderY + armLen, 4, 0, Math.PI*2);
+    ctx.arc(-torsoW/2 - armSwing*0.6, shoulderY + armLen, 4, 0, Math.PI*2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(torsoMidX + torsoW/2 + armSwing * 0.6, shoulderY + armLen, 4, 0, Math.PI*2);
+    ctx.arc(torsoW/2 + armSwing*0.6, shoulderY + armLen, 4, 0, Math.PI*2);
     ctx.fill();
 
     // ── neck ──
@@ -628,7 +709,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.lineWidth   = H * 0.06;
     ctx.beginPath();
     ctx.moveTo(0, shoulderY);
-    ctx.lineTo(0, shoulderY - headR * 0.4);
+    ctx.lineTo(0, shoulderY - headR*0.4);
     ctx.stroke();
 
     // ── head ──
@@ -636,66 +717,95 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.beginPath();
     ctx.arc(0, shoulderY - headR, headR, 0, Math.PI*2);
     ctx.fill();
-    // simple face
+
+    // hair
+    if (p.female) {
+      // long hair
+      ctx.fillStyle = '#8B4513';
+      ctx.beginPath();
+      ctx.arc(0, shoulderY - headR, headR * 1.05, Math.PI, 0);
+      ctx.lineTo(headR * 1.1, shoulderY - headR*0.1);
+      ctx.quadraticCurveTo(headR*1.3, shoulderY + headR*0.8, headR*0.6, shoulderY + headR*1.0);
+      ctx.lineTo(-headR*0.6, shoulderY + headR*1.0);
+      ctx.quadraticCurveTo(-headR*1.3, shoulderY + headR*0.8, -headR*1.1, shoulderY - headR*0.1);
+      ctx.closePath();
+      ctx.fill();
+    } else if (p.type === 'kid') {
+      ctx.fillStyle = '#8B4513';
+      ctx.beginPath();
+      ctx.arc(0, shoulderY - headR*1.05, headR*0.9, Math.PI, 0);
+      ctx.fill();
+    } else if (p.type === 'beggar') {
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.arc(0, shoulderY - headR*1.02, headR*0.95, Math.PI, 0);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#5d3a1a';
+      ctx.fillRect(-headR*0.9, shoulderY - headR*2.0, headR*1.8, headR*0.9);
+    }
+
+    // face
     ctx.fillStyle = '#333';
-    // eyes
     ctx.beginPath();
     ctx.arc(-headR*0.3, shoulderY - headR - headR*0.1, headR*0.1, 0, Math.PI*2);
     ctx.fill();
     ctx.beginPath();
     ctx.arc( headR*0.3, shoulderY - headR - headR*0.1, headR*0.1, 0, Math.PI*2);
     ctx.fill();
-    // mouth
+    // exaggerated smile
     ctx.beginPath();
-    ctx.arc(0, shoulderY - headR + headR*0.2, headR*0.25, 0, Math.PI);
+    ctx.arc(0, shoulderY - headR + headR*0.25, headR*0.32, 0.1, Math.PI - 0.1);
     ctx.strokeStyle = '#333';
     ctx.lineWidth   = 1.5;
     ctx.stroke();
-
-    // ── hat ──
-    if (p.hatEmoji) {
-      ctx.font = (headR * 1.6) + 'px Arial';
-      ctx.textAlign  = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(p.hatEmoji, 0, shoulderY - headR * 2 - 2);
-    }
-
-    // ── type emoji badge (small, above head) ──
-    ctx.font = (headR * 1.2) + 'px Arial';
-    ctx.textAlign  = 'center';
-    ctx.textBaseline = 'alphabetic';
-    // put it to the side so it doesn't clash with hat
-    ctx.fillText(p.emoji, headR * 1.3, shoulderY - headR * (p.hatEmoji ? 2.8 : 1.8));
-
-    // ── "GRAB" highlight ring when mouse hovers ──
-    if (!p.grabbed) {
-      const localMX = facingRight ? mouseX - cx : -(mouseX - cx);
-      const localMY = mouseY - feetY;
-      const hitR    = H * 0.55;
-      // check if hovering
-      const dist = Math.sqrt(localMX*localMX + (localMY - shoulderY + headR)*( localMY - shoulderY + headR));
-      if (dist < hitR && !grabbed) {
-        ctx.globalAlpha = 0.7;
-        ctx.strokeStyle = '#FFD700';
-        ctx.lineWidth   = 3;
-        ctx.setLineDash([5,4]);
-        ctx.beginPath();
-        ctx.ellipse(0, shoulderY - headR + H*0.2, H*0.25, H*0.55, 0, 0, Math.PI*2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-    }
-
-    // grabbed: draw a bright ring
-    if (p.grabbed) {
-      ctx.globalAlpha = 0.9;
-      ctx.strokeStyle = '#00FFFF';
-      ctx.lineWidth   = 3;
-      ctx.setLineDash([6, 3]);
+    // blush for female
+    if (p.female) {
+      ctx.fillStyle = 'rgba(255,100,100,0.3)';
       ctx.beginPath();
-      ctx.ellipse(0, shoulderY - headR + H*0.2, H*0.27, H*0.57, 0, 0, Math.PI*2);
+      ctx.ellipse(-headR*0.55, shoulderY - headR + headR*0.1, headR*0.25, headR*0.15, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse( headR*0.55, shoulderY - headR + headR*0.1, headR*0.25, headR*0.15, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // hat
+    if (p.hatEmoji) {
+      ctx.font = (headR * 1.7) + 'px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(p.hatEmoji, 0, shoulderY - headR*1.9);
+    }
+
+    // type emoji badge
+    ctx.font = (headR * 1.1) + 'px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.emoji, headR*1.5, shoulderY - headR*(p.hatEmoji ? 3.2 : 2.1));
+
+    // hover highlight ring
+    const localMX = facingRight ? mouseX - cx : -(mouseX - cx);
+    const localMY = mouseY - feetY;
+    const bodyTopY = shoulderY - headR*2;
+    const bodyH    = Math.abs(bodyTopY);
+    const inX = Math.abs(localMX) < H * 0.32;
+    const inY = localMY > bodyTopY - headR*0.5 && localMY < 5;
+    if (inX && inY) {
+      ctx.globalAlpha = 0.75;
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth   = 3;
+      ctx.setLineDash([5,4]);
+      ctx.beginPath();
+      ctx.ellipse(0, shoulderY - headR + H*0.22, H*0.26, H*0.56, 0, 0, Math.PI*2);
       ctx.stroke();
       ctx.setLineDash([]);
+      // show "点击!" prompt
+      ctx.globalAlpha = 1;
+      ctx.font = 'bold ' + (headR*1.1) + 'px Arial';
+      ctx.fillStyle = '#FFD700';
+      ctx.textAlign = 'center';
+      ctx.fillText('点击!', 0, shoulderY - headR*3.0 - (p.hatEmoji ? headR*1.5 : 0));
     }
 
     ctx.restore();
@@ -706,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.font = v.size + 'px Arial';
     ctx.textAlign = 'center';
     if (v.vx < 0) {
-      ctx.scale(-1, 1);
+      ctx.scale(-1,1);
       ctx.fillText(v.emoji, -v.x, v.y);
     } else {
       ctx.fillText(v.emoji, v.x, v.y);
@@ -714,153 +824,113 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.restore();
   }
 
-  // ─────────────────────────────────────────
-  //  CUSTOM CURSOR  (hand/grab icon on canvas)
-  // ─────────────────────────────────────────
   function drawCursor() {
     if (mouseX < 0) return;
     ctx.save();
     ctx.font = '22px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    // show a grabbing hand emoji
-    ctx.fillText(grabbed ? '✊' : '🖐️', mouseX, mouseY - 22);
+    ctx.fillText('👆', mouseX - 4, mouseY - 24);
     ctx.restore();
   }
 
-  // ─────────────────────────────────────────
-  //  GRAB DETECTION  — find person under mouse
-  // ─────────────────────────────────────────
+  // ── HIT TEST ──
   function personHitTest(p, mx, my) {
     const H = p.personH;
-    const shoulderY = -(H - H*0.13*2 - H*0.04);
-    const headTopY  = p.baseY + shoulderY - H*0.13*2;
-    const feetY     = p.baseY;
-    // bounding box check (generous)
-    const withinX = Math.abs(mx - p.x) < H * 0.32;
-    const withinY = my > headTopY && my < feetY + 5;
+    const headR = H * 0.13;
+    const shoulderY = -(H - headR*2 - H*0.04);
+    const headTopY  = p.baseY + shoulderY - headR*2;
+    const withinX   = Math.abs(mx - p.x) < H * 0.35;
+    const withinY   = my > headTopY && my < p.baseY + 6;
     return withinX && withinY;
   }
 
-  // ─────────────────────────────────────────
-  //  MOUSE EVENTS
-  // ─────────────────────────────────────────
-  canvas.addEventListener('mousemove', function(e) {
-    const rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
-
-    if (grabbed) {
-      // drag the person — keep their feet offset
-      grabbed.x     = mouseX + grabOffX;
-      grabbed.baseY = mouseY + grabOffY;
-    }
-  });
-
-  canvas.addEventListener('mousedown', function(e) {
+  // ── CLICK TO SCORE ──
+  canvas.addEventListener('click', function(e) {
     if (!running) return;
     const rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
-    mouseDown = true;
+    const cx   = e.clientX - rect.left;
+    const cy   = e.clientY - rect.top;
 
-    // Try to grab a person
     for (let i = people.length - 1; i >= 0; i--) {
       const p = people[i];
-      if (!p.grabbed && personHitTest(p, mouseX, mouseY)) {
-        grabbed        = p;
-        p.grabbed      = true;
-        grabOffX       = p.x     - mouseX;
-        grabOffY       = p.baseY - mouseY;
-        // stop walking while grabbed
-        p._savedVX     = p.vx;
-        p.vx           = 0;
+      if (personHitTest(p, cx, cy)) {
+        const pts = p.good ? 1 : -1;
+        score = Math.max(-99, score + pts);
+        updateHUD();
+        showTooltip(p, e.clientX, e.clientY, pts);
+        // flash effect
+        p.flash     = 20;
+        p.flashGood = p.good;
+        // exaggerated jump for good, stumble for bad
+        if (p.good) {
+          p._jumpV = -6;
+          p._jumped = true;
+        }
+        // remove after flash
+        const pi = i;
+        setTimeout(() => {
+          if (people[pi]) people.splice(pi, 1);
+        }, 400);
+        people.splice(i, 1); // remove immediately
+        if (score >= 5) {
+          running = false;
+          clearInterval(timerID);
+          stopSpawns();
+          cancelAnimationFrame(animFrame);
+          setTimeout(() => endLevel(true), 300);
+        }
         break;
       }
     }
   });
 
-  canvas.addEventListener('mouseup', function(e) {
-    if (!running || !grabbed) return;
+  // ── MOUSE MOVE (for hover) ──
+  canvas.addEventListener('mousemove', function(e) {
     const rect = canvas.getBoundingClientRect();
     mouseX = e.clientX - rect.left;
     mouseY = e.clientY - rect.top;
-
-    // Score the grab — treat "release" as the "click"
-    const p   = grabbed;
-    const pts = p.good ? 1 : -1;
-    score = Math.max(-99, score + pts);
-    updateHUD();
-    showTooltip(p, e.clientX, e.clientY, pts);
-    p.flash    = 18;
-    p.flashGood = p.good;
-
-    // remove from list
-    const idx = people.indexOf(p);
-    if (idx !== -1) people.splice(idx, 1);
-
-    grabbed    = null;
-    mouseDown  = false;
-
-    if (score >= 5) endLevel(true);
   });
 
-  // ─────────────────────────────────────────
-  //  TOUCH SUPPORT  (drag on mobile)
-  // ─────────────────────────────────────────
+  // ── TOUCH SUPPORT ──
   canvas.addEventListener('touchstart', function(e) {
     if (!running) return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const t    = e.touches[0];
-    mouseX = t.clientX - rect.left;
-    mouseY = t.clientY - rect.top;
-
+    const tx   = t.clientX - rect.left;
+    const ty   = t.clientY - rect.top;
+    mouseX = tx; mouseY = ty;
     for (let i = people.length - 1; i >= 0; i--) {
       const p = people[i];
-      if (!p.grabbed && personHitTest(p, mouseX, mouseY)) {
-        grabbed    = p;
-        p.grabbed  = true;
-        grabOffX   = p.x     - mouseX;
-        grabOffY   = p.baseY - mouseY;
-        p._savedVX = p.vx;
-        p.vx       = 0;
+      if (personHitTest(p, tx, ty)) {
+        const pts = p.good ? 1 : -1;
+        score = Math.max(-99, score + pts);
+        updateHUD();
+        showTooltip(p, t.clientX, t.clientY, pts);
+        p.flash = 20; p.flashGood = p.good;
+        people.splice(i, 1);
+        if (score >= 5) {
+          running = false;
+          clearInterval(timerID);
+          stopSpawns();
+          cancelAnimationFrame(animFrame);
+          setTimeout(() => endLevel(true), 300);
+        }
         break;
       }
     }
   }, { passive: false });
 
   canvas.addEventListener('touchmove', function(e) {
-    if (!running || !grabbed) return;
     e.preventDefault();
     const rect = canvas.getBoundingClientRect();
     const t    = e.touches[0];
     mouseX = t.clientX - rect.left;
     mouseY = t.clientY - rect.top;
-    grabbed.x     = mouseX + grabOffX;
-    grabbed.baseY = mouseY + grabOffY;
   }, { passive: false });
 
-  canvas.addEventListener('touchend', function(e) {
-    if (!running || !grabbed) return;
-    e.preventDefault();
-    const p   = grabbed;
-    const pts = p.good ? 1 : -1;
-    score = Math.max(-99, score + pts);
-    updateHUD();
-    // approximate position for tooltip
-    showTooltip(p, p.x, p.baseY - p.personH, pts);
-    p.flash     = 18;
-    p.flashGood = p.good;
-    const idx = people.indexOf(p);
-    if (idx !== -1) people.splice(idx, 1);
-    grabbed = null;
-    if (score >= 5) endLevel(true);
-  }, { passive: false });
-
-  // ─────────────────────────────────────────
-  //  TOOLTIP
-  // ─────────────────────────────────────────
+  // ── TOOLTIP ──
   function showTooltip(p, cx, cy, pts) {
     tooltip.style.display = 'block';
     tooltip.style.left    = (cx + 14) + 'px';
@@ -870,26 +940,22 @@ document.addEventListener('DOMContentLoaded', function() {
       tooltip.textContent = '+1 ✅ ' + p.label;
     } else {
       tooltip.style.background = 'rgba(192,57,43,0.9)';
-      tooltip.textContent = '-1 ❌ ' + p.label;
+      tooltip.textContent = '-1 ❌ ' + p.label + ' (错误目标！)';
     }
     clearTimeout(tooltip._timer);
-    tooltip._timer = setTimeout(() => { tooltip.style.display = 'none'; }, 1300);
+    tooltip._timer = setTimeout(() => { tooltip.style.display = 'none'; }, 1400);
   }
 
-  // ─────────────────────────────────────────
-  //  HUD
-  // ─────────────────────────────────────────
+  // ── HUD UPDATE ──
   function updateHUD() {
-    levelLabel.textContent = 'Level ' + level;
+    levelLabel.textContent = '第 ' + level + ' 关';
     scoreLabel.textContent = score;
     scoreLabel.style.color = score >= 0 ? '#7FFF00' : '#FF6B6B';
     timerLabel.textContent = timeLeft + 's';
     timerLabel.style.color = timeLeft <= 8 ? '#FF6B6B' : '#fff';
   }
 
-  // ─────────────────────────────────────────
-  //  TIMER
-  // ─────────────────────────────────────────
+  // ── TIMER ──
   function startTimer() {
     timeLeft = 30;
     updateHUD();
@@ -899,82 +965,66 @@ document.addEventListener('DOMContentLoaded', function() {
       updateHUD();
       if (timeLeft <= 0) {
         clearInterval(timerID);
+        running = false;
+        stopSpawns();
+        cancelAnimationFrame(animFrame);
         endLevel(score >= 5);
       }
     }, 1000);
   }
 
-  // ─────────────────────────────────────────
-  //  SPAWN INTERVALS
-  // ─────────────────────────────────────────
-  let spawnPeopleID = null;
-  let spawnCarID    = null;
-
+  // ── SPAWNS ──
   function startSpawns() {
-    spawnPeopleID = setInterval(spawnPerson,  1600);
-    spawnCarID    = setInterval(spawnVehicle, 2800);
+    const interval = Math.max(1000, 1600 - (level-1)*150);
+    spawnPeopleID = setInterval(spawnPerson, interval);
+    spawnCarID    = setInterval(spawnVehicle, 2600);
     spawnPerson(); spawnPerson(); spawnVehicle();
   }
-
   function stopSpawns() {
     clearInterval(spawnPeopleID);
     clearInterval(spawnCarID);
   }
 
-  // ─────────────────────────────────────────
-  //  MAIN GAME LOOP
-  // ─────────────────────────────────────────
+  // ── GAME LOOP ──
   function gameLoop() {
     if (!running) return;
-
-    walkTick++;   // advances leg/arm animation
-
+    walkTick++;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     drawBackground();
     drawClouds();
     buildings.forEach(drawBuilding);
 
-    // animate clouds
-    clouds.forEach(c => {
-      c.x += c.speed;
-      if (c.x - c.r > canvas.width) c.x = -c.r * 2;
-    });
+    clouds.forEach(c => { c.x += c.speed; if (c.x - c.r > canvas.width) c.x = -c.r*2; });
 
-    // vehicles
-    vehicles = vehicles.filter(v => v.x > -100 && v.x < canvas.width + 100);
+    vehicles = vehicles.filter(v => v.x > -120 && v.x < canvas.width + 120);
     vehicles.forEach(v => { v.x += v.vx; drawVehicle(v); });
 
-    // people
-    people = people.filter(p => p.x > -80 && p.x < canvas.width + 80);
+    people = people.filter(p => p.x > -90 && p.x < canvas.width + 90);
     people.forEach(p => {
-      // only walk if not grabbed
-      if (!p.grabbed) p.x += p.vx;
+      p.x += p.vx;
       if (p.flash > 0) p.flash--;
       drawPerson(p);
     });
 
     drawCursor();
-
     animFrame = requestAnimationFrame(gameLoop);
   }
 
-  // ─────────────────────────────────────────
-  //  START LEVEL
-  // ─────────────────────────────────────────
+  // ── START LEVEL ──
   function startLevel() {
     score    = 0;
     running  = true;
     people   = [];
     vehicles = [];
-    grabbed  = null;
     walkTick = 0;
 
     canvas.style.display = 'block';
     hud.style.display    = 'flex';
-    startScreen.style.display  = 'none';
-    rewardScreen.style.display = 'none';
-    failScreen.style.display   = 'none';
+    startScreen.style.display    = 'none';
+    cutsceneScreen.style.display = 'none';
+    treasureScreen.style.display = 'none';
+    failScreen.style.display     = 'none';
 
     buildScene();
     updateHUD();
@@ -983,63 +1033,206 @@ document.addEventListener('DOMContentLoaded', function() {
     gameLoop();
   }
 
-  // ─────────────────────────────────────────
-  //  END LEVEL
-  // ─────────────────────────────────────────
+  // ── END LEVEL ──
   function endLevel(won) {
-    running = false;
-    clearInterval(timerID);
-    stopSpawns();
-    cancelAnimationFrame(animFrame);
-    grabbed = null;
-
-    if (won) showReward();
-    else     showFail();
+    hud.style.display = 'none';
+    if (won) {
+      if (level === 3) {
+        showTreasure();
+      } else {
+        showCutscene(level);
+      }
+    } else {
+      showFail();
+    }
   }
 
-  // ─────────────────────────────────────────
-  //  REWARD / FAIL SCREENS
-  // ─────────────────────────────────────────
-  const REWARDS = [
-    { emoji:'🍔', title:'Burger Time!',       desc:'You closed great deals!\nYour reward: a juicy LA burger. 🍔🎉' },
-    { emoji:'🍽️',  title:'Restaurant Dinner!', desc:'Outstanding work, agent!\nEnjoy a fancy restaurant dinner. 🍽️✨' },
-    { emoji:'🏠',  title:'You Got the House!', desc:'LEGENDARY agent! You earned\na beautiful LA house! 🏠🌴' },
+  // ── CUTSCENE (win level 1 or 2) ──
+  // We animate an "eating" progress bar, then auto-advance or skip
+  let cutsceneTimer = null;
+  let cutsceneProgress = 0;
+  let cutsceneDuration = 3500; // ms
+  let cutsceneInterval = null;
+  let cutsceneNextLevel = 1;
+
+  const CUTSCENES = [
+    {
+      title: '🎉 第1关完成！大口吃汉堡！',
+      frames: ['🍔😐','🍔😮','😋🍔','😁🤤','🤤��','😆🍔'],
+      desc: '经纪人大口大口吃汉堡，嚼得满嘴油！',
+      bg: 'rgba(255,200,0,0.85)',
+    },
+    {
+      title: '🎉 第2关完成！大口吃面条！',
+      frames: ['🍜😐','🍜😮','😋🍜','🍝😆','😆🍜','🤤🍝'],
+      desc: '经纪人大口大口嗦面条，溅了一身汤！',
+      bg: 'rgba(150,50,200,0.85)',
+    },
   ];
 
-  function showReward() {
-    const r = REWARDS[(level - 1) % REWARDS.length];
-    document.getElementById('rewardEmoji').textContent = r.emoji;
-    document.getElementById('rewardTitle').textContent = r.title;
-    document.getElementById('rewardDesc').textContent  = r.desc;
-    rewardScreen.style.background = level === 1
-      ? 'rgba(212,172,8,0.85)'
-      : level === 2
-        ? 'rgba(100,40,140,0.85)'
-        : 'rgba(20,90,40,0.85)';
-    rewardScreen.style.display = 'flex';
-    hud.style.display = 'none';
+  function showCutscene(completedLevel) {
+    const cs = CUTSCENES[completedLevel - 1];
+    cutsceneNextLevel = completedLevel + 1;
+
+    document.getElementById('cutsceneTitle').textContent = cs.title;
+    document.getElementById('cutsceneDesc').textContent  = cs.desc;
+    cutsceneScreen.style.background = cs.bg;
+    cutsceneScreen.style.display = 'flex';
+
+    // reset progress
+    cutsceneProgress = 0;
+    document.getElementById('cutsceneProgressFill').style.width = '0%';
+
+    // animate eating frames
+    let frameIdx = 0;
+    clearInterval(cutsceneInterval);
+    clearTimeout(cutsceneTimer);
+
+    const anim = document.getElementById('cutsceneAnim');
+    anim.textContent = cs.frames[0];
+
+    cutsceneInterval = setInterval(function() {
+      frameIdx = (frameIdx + 1) % cs.frames.length;
+      anim.textContent = cs.frames[frameIdx];
+    }, 280);
+
+    // progress bar
+    const tickMs = 50;
+    const totalTicks = cutsceneDuration / tickMs;
+    let tick = 0;
+    cutsceneTimer = setInterval(function() {
+      tick++;
+      cutsceneProgress = Math.min(100, (tick / totalTicks) * 100);
+      document.getElementById('cutsceneProgressFill').style.width = cutsceneProgress + '%';
+      if (cutsceneProgress >= 100) {
+        clearInterval(cutsceneTimer);
+        clearInterval(cutsceneInterval);
+        advanceCutscene();
+      }
+    }, tickMs);
   }
+
+  function advanceCutscene() {
+    clearInterval(cutsceneTimer);
+    clearInterval(cutsceneInterval);
+    cutsceneScreen.style.display = 'none';
+    level = cutsceneNextLevel;
+    startLevel();
+  }
+
+  // ── TREASURE SCREEN (level 3 win) ──
+  let treasureAnimFrame = null;
+  let treasureParticles = [];
+
+  const tCanvas = document.getElementById('treasureCanvas');
+  const tCtx    = tCanvas.getContext('2d');
+
+  function showTreasure() {
+    treasureScreen.style.display = 'flex';
+    tCanvas.width  = window.innerWidth;
+    tCanvas.height = window.innerHeight;
+
+    // spawn particles
+    treasureParticles = [];
+    const emojis = ['💰','💎','🪙','👑','💍','🏆','✨','💵','🌟','🎊','🎉','💛'];
+    for (let i = 0; i < 80; i++) {
+      treasureParticles.push({
+        x:  Math.random() * tCanvas.width,
+        y:  Math.random() * tCanvas.height,
+        vx: (Math.random()-0.5)*4,
+        vy: (Math.random()-0.5)*4 - 2,
+        emoji: emojis[Math.floor(Math.random()*emojis.length)],
+        size: 24 + Math.random()*28,
+        rot: Math.random()*Math.PI*2,
+        rotV: (Math.random()-0.5)*0.12,
+      });
+    }
+    cancelAnimationFrame(treasureAnimFrame);
+    loopTreasure();
+  }
+
+  function loopTreasure() {
+    tCtx.clearRect(0, 0, tCanvas.width, tCanvas.height);
+    treasureParticles.forEach(p => {
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.rot += p.rotV;
+      p.vy += 0.04; // gravity
+      if (p.y > tCanvas.height + 40) { p.y = -40; p.x = Math.random()*tCanvas.width; p.vy = -3 - Math.random()*3; }
+      if (p.x < -40)  p.x = tCanvas.width + 40;
+      if (p.x > tCanvas.width + 40) p.x = -40;
+      tCtx.save();
+      tCtx.translate(p.x, p.y);
+      tCtx.rotate(p.rot);
+      tCtx.font = p.size + 'px Arial';
+      tCtx.textAlign = 'center';
+      tCtx.textBaseline = 'middle';
+      tCtx.fillText(p.emoji, 0, 0);
+      tCtx.restore();
+    });
+    treasureAnimFrame = requestAnimationFrame(loopTreasure);
+  }
+
+  // ── FAIL SCREEN ──
+  let failTimer    = null;
+  let failInterval = null;
+
+  const FAIL_FRAMES = ['🌿😐','🌿😮','😋🌿','🐑🌿','😆🌿','🤣🌿'];
 
   function showFail() {
     failScreen.style.display = 'flex';
-    hud.style.display = 'none';
+    document.getElementById('failProgressFill').style.width = '0%';
+
+    let frameIdx = 0;
+    const anim = document.getElementById('failAnim');
+    anim.textContent = FAIL_FRAMES[0];
+
+    clearInterval(failInterval);
+    clearInterval(failTimer);
+
+    failInterval = setInterval(function() {
+      frameIdx = (frameIdx + 1) % FAIL_FRAMES.length;
+      anim.textContent = FAIL_FRAMES[frameIdx];
+    }, 300);
+
+    const tickMs = 50;
+    const totalMs = 3500;
+    const totalTicks = totalMs / tickMs;
+    let tick = 0;
+    failTimer = setInterval(function() {
+      tick++;
+      const pct = Math.min(100, (tick / totalTicks) * 100);
+      document.getElementById('failProgressFill').style.width = pct + '%';
+      if (pct >= 100) {
+        clearInterval(failTimer);
+        clearInterval(failInterval);
+        // enable retry button after eating is done
+      }
+    }, tickMs);
   }
 
-  // ─────────────────────────────────────────
-  //  BUTTON HANDLERS
-  // ─────────────────────────────────────────
+  // ── BUTTON HANDLERS ──
+
   startBtn.addEventListener('click', function() {
     level = 1;
     startLevel();
   });
 
-  nextBtn.addEventListener('click', function() {
-    rewardScreen.style.display = 'none';
-    level++;
+  cutsceneSkipBtn.addEventListener('click', function() {
+    advanceCutscene();
+  });
+
+  treasureNextBtn.addEventListener('click', function() {
+    cancelAnimationFrame(treasureAnimFrame);
+    treasureScreen.style.display = 'none';
+    // After level 3 win, go back to level 1 (loop)
+    level = 1;
     startLevel();
   });
 
-  retryBtn.addEventListener('click', function() {
+  failRetryBtn.addEventListener('click', function() {
+    clearInterval(failTimer);
+    clearInterval(failInterval);
     failScreen.style.display = 'none';
     startLevel();
   });
@@ -1047,7 +1240,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // initial resize
   resizeCanvas();
 
-  // BUTTON CHECKLIST: #startBtn ✓  #nextBtn ✓  #retryBtn ✓
+  // BUTTON CHECKLIST: #startBtn ✓  #cutsceneSkipBtn ✓  #treasureNextBtn ✓  #failRetryBtn ✓
 
 }); // end DOMContentLoaded
 </script>
