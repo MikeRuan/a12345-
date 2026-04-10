@@ -1,899 +1,991 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>保险经纪人的日子</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Arial', sans-serif; }
-  #gameContainer { position: relative; width: 800px; height: 500px; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>花狗山学霸</title>
+  <style>
+    /* 全局字体与基础样式 */
+    @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap');
 
-  /* Start screen overlay */
-  #startScreen {
-    position: absolute; z-index: 100; width: 100%; height: 100%;
-    background: linear-gradient(135deg, #87CEEB 0%, #FDB97D 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    border-radius: 12px; overflow: hidden;
-  }
-  #startScreen h1 { font-size: 36px; color: #2c3e50; text-shadow: 2px 2px 0 #fff; margin-bottom: 8px; }
-  #startScreen .subtitle { font-size: 16px; color: #34495e; margin-bottom: 16px; }
-  .rulesBox {
-    background: rgba(255,255,255,0.85); border-radius: 12px; padding: 14px 20px;
-    margin-bottom: 18px; max-width: 480px; width: 90%; border: 2px solid #f39c12;
-  }
-  .rulesBox h3 { color: #e74c3c; margin-bottom: 8px; font-size: 15px; }
-  .rulesBox .good { color: #27ae60; font-size: 13px; margin-bottom: 4px; }
-  .rulesBox .bad  { color: #e74c3c; font-size: 13px; margin-bottom: 4px; }
-  .rulesBox .note { color: #7f8c8d; font-size: 12px; margin-top: 6px; }
-  #startBtn {
-    background: linear-gradient(135deg, #f39c12, #e74c3c); color: white;
-    border: none; border-radius: 30px; padding: 14px 40px; font-size: 20px;
-    cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.1s;
-  }
-  #startBtn:hover { transform: scale(1.05); }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  /* Canvas */
-  #gameCanvas { position: absolute; z-index: 1; display: none; border-radius: 12px; }
+    body {
+      font-family: 'Ma Shan Zheng', '楷体', cursive, sans-serif;
+      background: #87CEEB;
+      overflow-x: hidden;
+      color: #3a2a1a;
+    }
 
-  /* HUD */
-  #hud {
-    position: absolute; z-index: 50; top: 8px; left: 0; width: 100%;
-    display: none; justify-content: space-around; align-items: center;
-    pointer-events: none;
-  }
-  .hudBox {
-    background: rgba(0,0,0,0.55); color: #fff; border-radius: 8px;
-    padding: 5px 14px; font-size: 15px; font-weight: bold;
-  }
-  .hudBox span { color: #FFD700; }
+    /* ===== 天空背景 ===== */
+    .sky {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: linear-gradient(180deg, #5BC8F5 0%, #A8E6F0 40%, #C8F0C0 70%, #8BC34A 100%);
+      z-index: -10;
+    }
 
-  /* Overlay screens */
-  .overlayScreen {
-    position: absolute; z-index: 200; width: 100%; height: 100%;
-    display: none; flex-direction: column; align-items: center; justify-content: center;
-    border-radius: 12px;
-  }
-  #cutsceneScreen { background: linear-gradient(135deg, #6c5ce7, #fd79a8); }
-  #failScreen     { background: linear-gradient(135deg, #636e72, #2d3436); }
-  #treasureScreen { background: linear-gradient(135deg, #f9ca24, #f0932b); }
+    /* 云朵动画 */
+    .cloud {
+      position: fixed;
+      background: white;
+      border-radius: 50px;
+      opacity: 0.88;
+      z-index: -5;
+      animation: floatCloud linear infinite;
+    }
+    .cloud::before, .cloud::after {
+      content: '';
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+    }
+    .c1 { width:120px; height:40px; top:8%; animation-duration:30s; animation-delay:0s; }
+    .c1::before { width:60px; height:60px; top:-30px; left:15px; }
+    .c1::after  { width:40px; height:40px; top:-20px; left:55px; }
 
-  .overlayScreen h2 { color: white; font-size: 30px; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); }
-  .overlayScreen p  { color: rgba(255,255,255,0.9); font-size: 16px; margin-bottom: 20px; text-align: center; padding: 0 20px; }
-  .bigEmoji { font-size: 80px; margin-bottom: 10px; animation: bounce 0.6s infinite alternate; }
-  @keyframes bounce { from { transform: translateY(0) scale(1); } to { transform: translateY(-15px) scale(1.1); } }
+    .c2 { width:160px; height:50px; top:18%; animation-duration:45s; animation-delay:-15s; }
+    .c2::before { width:80px; height:80px; top:-40px; left:20px; }
+    .c2::after  { width:55px; height:55px; top:-28px; left:75px; }
 
-  .progressBarWrap { width: 300px; height: 20px; background: rgba(255,255,255,0.3); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
-  .progressBarFill { height: 100%; background: #fff; border-radius: 10px; transition: width 0.05s linear; }
+    .c3 { width:90px;  height:30px; top:6%;  animation-duration:38s; animation-delay:-8s; }
+    .c3::before { width:45px; height:45px; top:-22px; left:10px; }
+    .c3::after  { width:30px; height:30px; top:-15px; left:40px; }
 
-  .overlayBtn {
-    background: rgba(255,255,255,0.25); color: white; border: 2px solid white;
-    border-radius: 25px; padding: 10px 28px; font-size: 16px; cursor: pointer; transition: background 0.2s;
-  }
-  .overlayBtn:hover { background: rgba(255,255,255,0.45); }
+    .c4 { width:140px; height:45px; top:28%; animation-duration:52s; animation-delay:-22s; }
+    .c4::before { width:70px; height:70px; top:-35px; left:18px; }
+    .c4::after  { width:48px; height:48px; top:-24px; left:65px; }
 
-  /* Tooltip */
-  #tooltip {
-    position: absolute; z-index: 300; background: rgba(0,0,0,0.75); color: #fff;
-    border-radius: 6px; padding: 4px 10px; font-size: 13px; pointer-events: none;
-    display: none; white-space: nowrap;
-  }
-</style>
+    @keyframes floatCloud {
+      from { left: -200px; }
+      to   { left: 110%;  }
+    }
+
+    /* ===== 山脉背景装饰 ===== */
+    .mountains {
+      position: fixed;
+      bottom: 0; left: 0;
+      width: 100%; height: 55%;
+      z-index: -8;
+      pointer-events: none;
+    }
+
+    /* ===== 导航栏 ===== */
+    nav {
+      position: sticky;
+      top: 0; z-index: 999;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 32px;
+      box-shadow: 0 3px 16px rgba(0,150,200,0.15);
+      border-bottom: 3px solid #FFB6C1;
+    }
+    .nav-logo {
+      font-size: 1.7rem;
+      font-weight: bold;
+      color: #e06080;
+      text-shadow: 2px 2px 0 #FFB6C1;
+      letter-spacing: 2px;
+    }
+    .nav-logo span { color: #3a9ecc; }
+    .nav-links { display: flex; gap: 18px; }
+    .nav-links a {
+      text-decoration: none;
+      color: #3a7a3a;
+      font-size: 1.05rem;
+      font-weight: bold;
+      padding: 5px 12px;
+      border-radius: 20px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .nav-links a:hover {
+      background: #FFB6C1;
+      color: #fff;
+    }
+
+    /* ===== 英雄区 ===== */
+    #hero {
+      position: relative;
+      min-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 20px 40px;
+    }
+    .hero-title {
+      font-size: clamp(2.5rem, 8vw, 5.5rem);
+      color: #fff;
+      text-shadow: 3px 3px 0 #e06080, 6px 6px 0 rgba(0,0,0,0.1);
+      margin-bottom: 12px;
+      animation: bounceIn 1s ease;
+    }
+    .hero-subtitle {
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      color: #fffde0;
+      text-shadow: 1px 1px 4px rgba(0,100,150,0.4);
+      margin-bottom: 30px;
+      max-width: 600px;
+    }
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 40px;
+    }
+    .badge {
+      background: rgba(255,255,255,0.9);
+      border: 3px solid #FFB6C1;
+      border-radius: 30px;
+      padding: 8px 22px;
+      font-size: 1rem;
+      color: #e06080;
+      font-weight: bold;
+      box-shadow: 0 4px 10px rgba(255,100,150,0.2);
+      animation: wobble 2.5s infinite;
+    }
+    .badge:nth-child(2) { animation-delay: 0.4s; border-color: #90EE90; color: #2e8a2e; }
+    .badge:nth-child(3) { animation-delay: 0.8s; border-color: #87CEEB; color: #1a7acc; }
+    .badge:nth-child(4) { animation-delay: 1.2s; border-color: #FFD700; color: #cc8800; }
+
+    /* 英雄图片 */
+    .hero-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .hero-img-wrap {
+      position: relative;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0,100,180,0.25);
+      border: 4px solid rgba(255,255,255,0.8);
+      transition: transform 0.3s;
+      cursor: pointer;
+    }
+    .hero-img-wrap:hover { transform: scale(1.06) rotate(-1.5deg); }
+    .hero-img-wrap img {
+      width: 230px;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    .img-label {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(255,182,193,0.85);
+      color: #8a1a3a;
+      text-align: center;
+      font-size: 0.95rem;
+      padding: 5px;
+      font-weight: bold;
+    }
+
+    @keyframes bounceIn {
+      0%   { transform: scale(0.5) translateY(-40px); opacity: 0; }
+      70%  { transform: scale(1.08) translateY(5px); }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    @keyframes wobble {
+      0%,100% { transform: rotate(-1deg) scale(1); }
+      50%      { transform: rotate(1.5deg) scale(1.05); }
+    }
+
+    /* ===== 通用 section 容器 ===== */
+    .section {
+      position: relative;
+      padding: 60px 20px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .section-title {
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      text-align: center;
+      margin-bottom: 40px;
+      color: #fff;
+      text-shadow: 2px 2px 0 #e06080, 4px 4px 8px rgba(0,0,0,0.15);
+    }
+    .section-title .emoji { margin: 0 8px; }
+
+    /* ===== 人物卡片 ===== */
+    #characters { background: transparent; }
+    .chars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 28px;
+    }
+    .char-card {
+      background: rgba(255,255,255,0.88);
+      border-radius: 28px;
+      padding: 28px 20px 22px;
+      text-align: center;
+      box-shadow: 0 8px 28px rgba(0,100,200,0.15);
+      border: 3px solid transparent;
+      transition: transform 0.3s, box-shadow 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .char-card:hover {
+      transform: translateY(-8px) rotate(1deg);
+      box-shadow: 0 16px 40px rgba(0,100,200,0.25);
+    }
+    .char-card::before {
+      content: '';
+      position: absolute;
+      top: -30px; right: -30px;
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      opacity: 0.12;
+    }
+    .char-card.dolphin { border-color: #87CEEB; }
+    .char-card.dolphin::before { background: #87CEEB; }
+    .char-card.kid    { border-color: #FFB6C1; }
+    .char-card.kid::before    { background: #FFB6C1; }
+    .char-card.spider { border-color: #FF6B6B; }
+    .char-card.spider::before { background: #FF6B6B; }
+    .char-card.sheep  { border-color: #90EE90; }
+    .char-card.sheep::before  { background: #90EE90; }
+
+    .char-emoji { font-size: 4.5rem; margin-bottom: 10px; display: block; }
+    .char-name  { font-size: 1.5rem; font-weight: bold; color: #3a2a1a; margin-bottom: 6px; }
+    .char-title { font-size: 0.95rem; color: #888; margin-bottom: 12px; }
+    .char-tags  { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 12px; }
+    .tag {
+      background: #FFB6C1;
+      color: #8a1a3a;
+      border-radius: 14px;
+      padding: 2px 10px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .tag.green  { background: #90EE90; color: #1a5a1a; }
+    .tag.blue   { background: #87CEEB; color: #1a4a8a; }
+    .tag.yellow { background: #FFD700; color: #7a5500; }
+    .tag.red    { background: #FF6B6B; color: #7a1a1a; }
+    .char-bio { font-size: 0.9rem; color: #555; line-height: 1.6; }
+
+    /* ===== 故事章节 ===== */
+    #story { background: transparent; }
+    .story-chapters { display: flex; flex-direction: column; gap: 36px; }
+    .chapter {
+      background: rgba(255,255,255,0.88);
+      border-radius: 28px;
+      padding: 32px 36px;
+      box-shadow: 0 6px 24px rgba(0,100,150,0.12);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 24px;
+      align-items: start;
+      border-left: 6px solid #FFB6C1;
+      transition: transform 0.3s;
+    }
+    .chapter:hover { transform: translateX(6px); }
+    .chapter:nth-child(2) { border-left-color: #90EE90; }
+    .chapter:nth-child(3) { border-left-color: #87CEEB; }
+    .chapter:nth-child(4) { border-left-color: #FFD700; }
+    .chapter:nth-child(5) { border-left-color: #FF6B6B; }
+    .chapter-num {
+      font-size: 3rem;
+      color: #FFB6C1;
+      font-weight: bold;
+      line-height: 1;
+      min-width: 60px;
+      text-align: center;
+    }
+    .chapter:nth-child(2) .chapter-num { color: #90EE90; }
+    .chapter:nth-child(3) .chapter-num { color: #87CEEB; }
+    .chapter:nth-child(4) .chapter-num { color: #FFD700; }
+    .chapter:nth-child(5) .chapter-num { color: #FF6B6B; }
+    .chapter-content h3 {
+      font-size: 1.4rem;
+      color: #3a2a1a;
+      margin-bottom: 10px;
+    }
+    .chapter-content p {
+      font-size: 1rem;
+      color: #555;
+      line-height: 1.9;
+    }
+    .chapter-content .quote {
+      margin-top: 12px;
+      padding: 10px 16px;
+      background: rgba(255,182,193,0.2);
+      border-radius: 12px;
+      font-style: italic;
+      color: #e06080;
+      font-size: 0.95rem;
+    }
+
+    /* ===== 每日学习计划 ===== */
+    #schedule { background: transparent; }
+    .schedule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .sched-card {
+      background: rgba(255,255,255,0.88);
+      border-radius: 20px;
+      padding: 22px 16px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(0,100,150,0.1);
+      border-top: 5px solid #FFB6C1;
+      transition: transform 0.3s;
+    }
+    .sched-card:hover { transform: scale(1.05); }
+    .sched-card:nth-child(2) { border-top-color: #90EE90; }
+    .sched-card:nth-child(3) { border-top-color: #87CEEB; }
+    .sched-card:nth-child(4) { border-top-color: #FFD700; }
+    .sched-card:nth-child(5) { border-top-color: #FF6B6B; }
+    .sched-time { font-size: 0.85rem; color: #aaa; margin-bottom: 6px; }
+    .sched-icon { font-size: 2.4rem; margin-bottom: 8px; }
+    .sched-name { font-size: 1.05rem; font-weight: bold; color: #3a2a1a; margin-bottom: 6px; }
+    .sched-who  { font-size: 0.85rem; color: #e06080; }
+
+    /* ===== 花狗山地图 ===== */
+    #map { background: transparent; }
+    .map-container {
+      background: rgba(255,255,255,0.88);
+      border-radius: 28px;
+      padding: 36px;
+      box-shadow: 0 8px 28px rgba(0,100,150,0.15);
+      text-align: center;
+      position: relative;
+      min-height: 420px;
+      overflow: hidden;
+    }
+    .map-svg { width: 100%; max-width: 680px; height: auto; }
+
+    /* ===== 名言墙 ===== */
+    #quotes { background: transparent; }
+    .quotes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 22px;
+    }
+    .quote-card {
+      background: rgba(255,255,255,0.9);
+      border-radius: 22px;
+      padding: 26px 22px;
+      box-shadow: 0 4px 18px rgba(0,100,150,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .quote-card::after {
+      content: '❝';
+      position: absolute;
+      top: -10px; right: 10px;
+      font-size: 5rem;
+      opacity: 0.08;
+      color: #000;
+      line-height: 1;
+    }
+    .quote-text { font-size: 1.05rem; color: #444; line-height: 1.8; margin-bottom: 14px; }
+    .quote-author { font-size: 0.9rem; color: #e06080; font-weight: bold; }
+    .quote-author span { color: #888; font-weight: normal; }
+
+    /* ===== 相册 ===== */
+    #gallery { background: transparent; }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 22px;
+    }
+    .gallery-item {
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 6px 22px rgba(0,100,150,0.18);
+      border: 4px solid rgba(255,255,255,0.8);
+      transition: transform 0.3s;
+      position: relative;
+    }
+    .gallery-item:hover { transform: scale(1.04) rotate(-0.8deg); }
+    .gallery-item img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      display: block;
+    }
+    .gallery-caption {
+      background: rgba(255,255,255,0.92);
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      color: #3a2a1a;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    /* ===== 互动按钮区 ===== */
+    #fun { background: transparent; }
+    .fun-center { text-align: center; }
+    .fun-buttons { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-bottom: 30px; }
+    .fun-btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 30px;
+      font-size: 1.1rem;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    }
+    .fun-btn:hover { transform: scale(1.08); box-shadow: 0 8px 22px rgba(0,0,0,0.18); }
+    .btn-pink   { background: #FFB6C1; color: #8a1a3a; }
+    .btn-green  { background: #90EE90; color: #1a5a1a; }
+    .btn-blue   { background: #87CEEB; color: #1a3a7a; }
+    .btn-yellow { background: #FFD700; color: #7a5500; }
+    #fun-output {
+      background: rgba(255,255,255,0.9);
+      border-radius: 22px;
+      padding: 24px;
+      font-size: 1.1rem;
+      color: #3a2a1a;
+      min-height: 80px;
+      box-shadow: 0 4px 16px rgba(0,100,150,0.1);
+      max-width: 600px;
+      margin: 0 auto;
+      display: none;
+      line-height: 1.8;
+    }
+
+    /* ===== 页脚 ===== */
+    footer {
+      text-align: center;
+      padding: 36px 20px;
+      color: rgba(255,255,255,0.9);
+      font-size: 1rem;
+      text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+      position: relative;
+      z-index: 1;
+    }
+    footer .footer-chars { font-size: 2.5rem; margin-bottom: 8px; letter-spacing: 8px; }
+
+    /* ===== 滚动出现动画 ===== */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 600px) {
+      nav { flex-direction: column; gap: 10px; }
+      .chapter { grid-template-columns: 1fr; gap: 8px; }
+      .chapter-num { font-size: 2rem; }
+      .hero-img-wrap img { width: 150px; height: 120px; }
+    }
+  </style>
 </head>
 <body>
-<div id="gameContainer">
 
-  <!-- Start Screen -->
-  <div id="startScreen">
-    <h1>🏙️ 保险经纪人的日子</h1>
-    <p class="subtitle">洛杉矶街头 — 点击拉客，完成业绩！</p>
-    <div class="rulesBox">
-      <h3>📋 游戏规则</h3>
-      <div class="good">✅ 好目标（+1分）：商人💼 · 上班族📋 · 家庭👨‍👩‍👧 · 情侣💕</div>
-      <div class="bad">❌ 坏目标（-1分）：小孩🧸 · 游客🧳 · 乞丐🎒</div>
-      <div class="note">每关需在30秒内得5分才能过关，共3关</div>
+  <!-- 天空背景 -->
+  <div class="sky"></div>
+
+  <!-- 漂浮云朵 -->
+  <div class="cloud c1"></div>
+  <div class="cloud c2"></div>
+  <div class="cloud c3"></div>
+  <div class="cloud c4"></div>
+
+  <!-- 山脉 SVG 背景 -->
+  <svg class="mountains" viewBox="0 0 1440 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- 远山 -->
+    <polygon points="0,500 0,280 200,120 400,260 600,80 800,240 1000,100 1200,220 1440,130 1440,500" fill="#5aaa5a" opacity="0.5"/>
+    <!-- 中山 -->
+    <polygon points="0,500 0,350 180,200 360,320 540,170 720,310 900,160 1080,300 1260,200 1440,280 1440,500" fill="#3d8a3d" opacity="0.7"/>
+    <!-- 前山 -->
+    <polygon points="0,500 0,420 240,320 480,400 720,280 960,400 1200,320 1440,380 1440,500" fill="#2e7d2e" opacity="0.85"/>
+    <!-- 树木装饰 -->
+    <g fill="#1a5c1a" opacity="0.7">
+      <polygon points="80,420 90,380 100,420"/>
+      <polygon points="140,415 150,370 160,415"/>
+      <polygon points="300,410 312,365 324,410"/>
+      <polygon points="450,418 462,368 474,418"/>
+      <polygon points="600,415 614,362 628,415"/>
+      <polygon points="780,408 794,355 808,408"/>
+      <polygon points="950,418 964,365 978,418"/>
+      <polygon points="1100,410 1116,358 1132,410"/>
+      <polygon points="1280,415 1294,362 1308,415"/>
+      <polygon points="1400,420 1414,375 1428,420"/>
+    </g>
+  </svg>
+
+  <!-- 导航栏 -->
+  <nav>
+    <div class="nav-logo">🌸 花<span>狗</span>山学霸</div>
+    <div class="nav-links">
+      <a href="#hero">首页</a>
+      <a href="#characters">学霸们</a>
+      <a href="#story">故事</a>
+      <a href="#schedule">每日计划</a>
+      <a href="#quotes">名言</a>
+      <a href="#gallery">相册</a>
+      <a href="#fun">互动</a>
     </div>
-    <button id="startBtn">🚀 开始游戏！</button>
-  </div>
+  </nav>
 
-  <!-- Game Canvas -->
-  <canvas id="gameCanvas" width="800" height="500"></canvas>
+  <!-- ===== 英雄区 ===== -->
+  <section id="hero">
+    <div class="hero-title">🌸 花狗山学霸 🌸</div>
+    <p class="hero-subtitle">
+      在蓝天白云之下、大山深林之间，<br/>
+      有四位充满灵魂的小精灵，<br/>
+      他们好学、努力、爱玩、活泼——<br/>
+      欢迎来到花狗山！
+    </p>
+    <div class="hero-badges">
+      <div class="badge">🐬 小海豚</div>
+      <div class="badge">🧒 小人人</div>
+      <div class="badge">🕷️ 蜘蛛侠</div>
+      <div class="badge">🐑 小羊羊</div>
+    </div>
 
-  <!-- HUD -->
-  <div id="hud">
-    <div class="hudBox">🏆 第 <span id="hudLevel">1</span> 关</div>
-    <div class="hudBox">⭐ 得分: <span id="hudScore">0</span> / 5</div>
-    <div class="hudBox">⏱️ <span id="hudTimer">30</span> 秒</div>
-  </div>
+    <!-- 三张图片 -->
+    <div class="hero-images">
+      <div class="hero-img-wrap">
+        <img src="https://raw.githubusercontent.com/MikeRuan/ai-camp-assets/main/uploads/6e2e0e87-0360-4423-bbbc-f7814b149d97.jpg" alt="花狗山风景1" />
+        <div class="img-label">🌿 花狗山的清晨</div>
+      </div>
+      <div class="hero-img-wrap">
+        <img src="https://raw.githubusercontent.com/MikeRuan/ai-camp-assets/main/uploads/362fd68a-5b6f-4691-975d-94c54f77d8e8.jpg" alt="花狗山风景2" />
+        <div class="img-label">☀️ 学霸们的课堂</div>
+      </div>
+      <div class="hero-img-wrap">
+        <img src="https://raw.githubusercontent.com/MikeRuan/ai-camp-assets/main/uploads/79bec90e-14ca-4f87-88e2-645ebf9bddf5.jpg" alt="花狗山风景3" />
+        <div class="img-label">🌸 玩耍的下午</div>
+      </div>
+    </div>
+  </section>
 
-  <!-- Cutscene Screen -->
-  <div id="cutsceneScreen" class="overlayScreen">
-    <div class="bigEmoji" id="cutsceneEmoji">🍔</div>
-    <h2 id="cutsceneTitle">过关！休息一下~</h2>
-    <p id="cutsceneText">第一关完成！去吃个汉堡庆祝！</p>
-    <div class="progressBarWrap"><div class="progressBarFill" id="cutsceneBar" style="width:100%"></div></div>
-    <button class="overlayBtn" id="cutsceneSkipBtn">跳过 ▶</button>
-  </div>
+  <!-- ===== 人物介绍 ===== -->
+  <section id="characters">
+    <div class="section">
+      <h2 class="section-title"><span class="emoji">🌟</span>四大学霸大揭秘<span class="emoji">🌟</span></h2>
+      <div class="chars-grid">
 
-  <!-- Treasure Screen (Level 3 win) -->
-  <div id="treasureScreen" class="overlayScreen">
-    <div class="bigEmoji">💰</div>
-    <h2>🎉 恭喜通关！</h2>
-    <p>三关全过！你成为洛杉矶最强保险经纪人！<br>数钱数到手软！💸💸💸</p>
-    <div class="progressBarWrap"><div class="progressBarFill" id="treasureBar" style="width:100%"></div></div>
-    <button class="overlayBtn" id="treasureNextBtn">继续 ▶</button>
-  </div>
+        <!-- 小海豚 -->
+        <div class="char-card dolphin fade-up">
+          <span class="char-emoji">🐬</span>
+          <div class="char-name">小海豚</div>
+          <div class="char-title">数学天才 · 海洋智慧之星</div>
+          <div class="char-tags">
+            <span class="tag blue">数学达人</span>
+            <span class="tag blue">游泳冠军</span>
+            <span class="tag">爱探索</span>
+          </div>
+          <div class="char-bio">
+            小海豚来自遥远的大海，却爱上了花狗山的清澈溪流。
+            她能在水里心算出复杂的数字，还会用贝壳排出美丽的数学图案。
+            每天早晨第一个到溪边练习，傍晚最后一个离开图书树！
+          </div>
+        </div>
 
-  <!-- Fail Screen -->
-  <div id="failScreen" class="overlayScreen">
-    <div class="bigEmoji">🌿</div>
-    <h2>今天颗粒无收...</h2>
-    <p>坐在路边吃草 🌿<br>明天再努力吧！</p>
-    <div class="progressBarWrap"><div class="progressBarFill" id="failBar" style="width:100%"></div></div>
-    <button class="overlayBtn" id="failRetryBtn">再试一次 🔄</button>
-  </div>
+        <!-- 小人人 -->
+        <div class="char-card kid fade-up">
+          <span class="char-emoji">🧒</span>
+          <div class="char-name">小人人</div>
+          <div class="char-title">语文诗人 · 花狗山说书人</div>
+          <div class="char-tags">
+            <span class="tag">写作高手</span>
+            <span class="tag">讲故事</span>
+            <span class="tag green">爱大自然</span>
+          </div>
+          <div class="char-bio">
+            小人人是花狗山土生土长的孩子，有着一双大大的眼睛和无尽的好奇心。
+            她最爱爬上最高的大树，用树叶当纸、用浆果当墨水写诗。
+            每次讲故事，连小鸟都会停下来聆听！
+          </div>
+        </div>
 
-  <!-- Tooltip -->
-  <div id="tooltip"></div>
+        <!-- 蜘蛛侠 -->
+        <div class="char-card spider fade-up">
+          <span class="char-emoji">🕷️</span>
+          <div class="char-name">蜘蛛侠</div>
+          <div class="char-title">科学达人 · 发明小天才</div>
+          <div class="char-tags">
+            <span class="tag red">科学实验</span>
+            <span class="tag red">发明创造</span>
+            <span class="tag yellow">超能力</span>
+          </div>
+          <div class="char-bio">
+            蜘蛛侠是花狗山最厉害的发明家！他用蛛丝做过望远镜、搭过图书馆，
+            还发明了能把树叶变成彩虹纸的神奇机器。
+            虽然有点粗心，但每次实验失败都笑着重来——"失败是发明之母！"
+          </div>
+        </div>
 
-</div>
+        <!-- 小羊羊 -->
+        <div class="char-card sheep fade-up">
+          <span class="char-emoji">🐑</span>
+          <div class="char-name">小羊羊</div>
+          <div class="char-title">音乐精灵 · 艺术小画家</div>
+          <div class="char-tags">
+            <span class="tag green">音乐天才</span>
+            <span class="tag green">绘画高手</span>
+            <span class="tag">温柔善良</span>
+          </div>
+          <div class="char-bio">
+            小羊羊是四人中最温柔的，但她的歌声能让整片森林安静下来。
+            她用花粉和彩泥画出花狗山的四季变化，每一幅画都充满生命力。
+            当朋友们灰心时，她总是第一个递上温暖的羊绒拥抱！
+          </div>
+        </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
+      </div>
+    </div>
+  </section>
 
-  // ===================== ELEMENT REFS =====================
-  const canvas       = document.getElementById('gameCanvas');
-  const ctx          = canvas.getContext('2d');
-  const startScreen  = document.getElementById('startScreen');
-  const hud          = document.getElementById('hud');
-  const cutsceneScreen = document.getElementById('cutsceneScreen');
-  const treasureScreen = document.getElementById('treasureScreen');
-  const failScreen   = document.getElementById('failScreen');
-  const tooltip      = document.getElementById('tooltip');
-  const hudLevel     = document.getElementById('hudLevel');
-  const hudScore     = document.getElementById('hudScore');
-  const hudTimer     = document.getElementById('hudTimer');
+  <!-- ===== 故事章节 ===== -->
+  <section id="story">
+    <div class="section">
+      <h2 class="section-title"><span class="emoji">📖</span>花狗山的故事<span class="emoji">📖</span></h2>
+      <div class="story-chapters">
 
-  // ===================== GAME STATE =====================
-  let level = 1;
-  let score = 0;
-  let timeLeft = 30;
-  let gameRunning = false;
-  let timerInterval = null;
-  let animFrameId = null;
-  let persons = [];
-  let floatingTexts = [];
-  let spawnTimer = 0;
-  let cutsceneTimeout = null;
+        <div class="chapter fade-up">
+          <div class="chapter-num">一</div>
+          <div class="chapter-content">
+            <h3>🌅 相遇在花狗山顶</h3>
+            <p>
+              很久很久以前，花狗山上住着无数精灵，但四位最特别的精灵还从未见过彼此。
+              那是一个阳光灿烂的早晨，小人人正在山顶写诗，突然一道蛛网从天而降——
+              蜘蛛侠的实验失控了！紧接着，小海豚从溪流里跃起，溅了小羊羊一身水珠。
+              四个人大眼瞪小眼，随后同时哈哈大笑起来。
+              "我叫小人人！" "我是蜘蛛侠！" "小海豚！" "小羊羊！"
+              就这样，花狗山最传奇的四人组正式成立了！
+            </p>
+            <div class="quote">🌟 "每一次相遇，都是命运精心安排的礼物。" — 小人人的第一首诗</div>
+          </div>
+        </div>
 
-  // ===================== PERSON TYPES =====================
-  const personTypes = [
-    { id:'businessman', label:'商人', good:true,  color:'#1a3a6b', accent:'#2980b9' },
-    { id:'worker',      label:'上班族', good:true, color:'#2471a3', accent:'#85c1e9' },
-    { id:'family',      label:'家庭',  good:true,  color:'#1e8449', accent:'#58d68d' },
-    { id:'couple',      label:'情侣',  good:true,  color:'#6c3483', accent:'#c39bd3' },
-    { id:'kid',         label:'小孩',  good:false, color:'#c0392b', accent:'#f1948a' },
-    { id:'tourist',     label:'游客',  good:false, color:'#d35400', accent:'#f0b27a' },
-    { id:'beggar',      label:'乞丐',  good:false, color:'#616a6b', accent:'#aab7b8' },
-  ];
+        <div class="chapter fade-up">
+          <div class="chapter-num">二</div>
+          <div class="chapter-content">
+            <h3>📚 图书树的秘密</h3>
+            <p>
+              四人最爱的地方是花狗山中心那棵百年大树——图书树。
+              这棵树的每一根树枝上都挂着用树叶装订的书本，里面藏着山里所有的智慧。
+              小海豚负责整理数学和自然科学的卷轴，小人人手写诗歌和历史故事，
+              蜘蛛侠搭建了一个蛛网书架系统，而小羊羊则为每本书画上美丽的封面插图。
+              当夕阳西下，四人坐在最粗的树枝上，一起阅读，一起讨论，
+              笑声回荡在整片森林。
+            </p>
+            <div class="quote">📚 "书是打开世界的窗户，图书树就是我们的宇宙。" — 蜘蛛侠</div>
+          </div>
+        </div>
 
-  // ===================== DRAW HELPERS =====================
-  // Draw a person at (cx, baseY), scale = height multiplier
-  function drawPerson(cx, baseY, type, walkPhase, scale) {
-    scale = scale || 1;
-    const H = 90 * scale;   // full height
-    const headR = 12 * scale;
-    const bodyH = 30 * scale;
-    const legH  = 28 * scale;
-    const armLen = 20 * scale;
-    const shoulderY = baseY - legH - bodyH;
-    const neckY     = shoulderY - 2 * scale;
-    const headY     = neckY - headR;
+        <div class="chapter fade-up">
+          <div class="chapter-num">三</div>
+          <div class="chapter-content">
+            <h3>🌊 拯救彩虹溪</h3>
+            <p>
+              有一天，花狗山唯一的彩虹溪突然变得混浊，美丽的彩虹消失了。
+              小海豚第一个发现问题：上游有一块大石头堵住了水流！
+              四人立刻行动起来：蜘蛛侠发明了"蛛网抓石机"，
+              小羊羊用歌声安抚了害怕的小动物们，
+              小人人记录下每一步骤写成救援手册，
+              小海豚跳入水中精准地指挥方向。
+              当大石头被移开的那一刻，七色彩虹再次出现在溪流上空，
+              整座山欢呼雀跃！
+            </p>
+            <div class="quote">🌈 "一个人的力量是水滴，四个人的力量是彩虹。" — 小羊羊的歌词</div>
+          </div>
+        </div>
 
-    // Walking leg animation
-    const legSwing = Math.sin(walkPhase) * 14 * scale;
+        <div class="chapter fade-up">
+          <div class="chapter-num">四</div>
+          <div class="chapter-content">
+            <h3>🎓 花狗山学霸大赛</h3>
+            <p>
+              每年秋天，花狗山都会举办一年一度的"山霸大赛"——
+              比的不是谁最厉害，而是看谁能帮助最多的同伴进步！
+              小海豚开设了数学特训班，三天教会了五十只小鸟计算飞行距离；
+              蜘蛛侠带着大家做科学实验，用树叶造出了会发光的灯；
+              小羊羊教小动物们唱歌、作画，让大家都找到了表达自己的方式；
+              小人人把所有的故事汇编成一本大书送给了花狗山图书树。
+              最后，四人一起站上领奖台，奖杯上刻着：
+              "最强学霸，不只是成绩，更是点亮他人的光。"
+            </p>
+            <div class="quote">🏆 "真正的学霸，是能让身边每个人都发光。" — 花狗山格言</div>
+          </div>
+        </div>
 
-    ctx.lineWidth = 2 * scale;
-    ctx.lineCap = 'round';
+        <div class="chapter fade-up">
+          <div class="chapter-num">五</div>
+          <div class="chapter-content">
+            <h3>🌙 星空下的誓言</h3>
+            <p>
+              那年冬天的最后一个夜晚，四人躺在花狗山顶的草地上，
+              仰望着满天繁星。小羊羊轻声哼起了她最爱的旋律，
+              小海豚数着天上的星座，蜘蛛侠突发奇想要用蛛网"钓"一颗星，
+              小人人拿出树叶本，开始写下他们共同的故事。
+              "我们要一直这样，好学、努力、爱玩、快乐，"小人人念道，
+              "直到花狗山每一棵树、每一条溪流都记住我们的名字！"
+              四人伸出小手，紧紧叠在一起——
+              "花狗山学霸，永远是一家！"
+            </p>
+            <div class="quote">🌙 "有你们在，花狗山的每个夜晚都像白天一样明亮。" — 四人共同的誓言</div>
+          </div>
+        </div>
 
-    // --- Legs ---
-    ctx.strokeStyle = (type.id === 'kid') ? '#8e1a0e' : '#2c3e50';
-    ctx.beginPath();
-    ctx.moveTo(cx, shoulderY + bodyH);
-    ctx.lineTo(cx - 7 * scale + legSwing, baseY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, shoulderY + bodyH);
-    ctx.lineTo(cx + 7 * scale - legSwing, baseY);
-    ctx.stroke();
+      </div>
+    </div>
+  </section>
 
-    // --- Body ---
-    ctx.fillStyle = type.color;
-    ctx.beginPath();
-    ctx.roundRect(cx - 11*scale, shoulderY, 22*scale, bodyH, 4*scale);
-    ctx.fill();
+  <!-- ===== 每日学习计划 ===== -->
+  <section id="schedule">
+    <div class="section">
+      <h2 class="section-title"><span class="emoji">⏰</span>学霸的每日计划<span class="emoji">⏰</span></h2>
+      <div class="schedule-grid">
+        <div class="sched-card fade-up">
+          <div class="sched-time">🌅 06:30</div>
+          <div class="sched-icon">🌊</div>
+          <div class="sched-name">晨溪游泳</div>
+          <div class="sched-who">小海豚领队</div>
+        </div>
+        <div class="sched-card fade-up">
+          <div class="sched-time">☀️ 08:00</div>
+          <div class="sched-icon">📖</div>
+          <div class="sched-name">图书树阅读</div>
+          <div class="sched-who">全员参与</div>
+        </div>
+        <div class="sched-card fade-up">
+          <div class="sched-time">🌞 10:00</div>
+          <div class="sched-icon">🔬</div>
+          <div class="sched-name">科学实验课</div>
+          <div class="sched-who">蜘蛛侠主讲</div>
+        </div>
+        <div class="sched-card fade-up">
+          <div class="sched-time">🌸 14:00</div>
+          <div class="sched-icon">🎨</div>
+          <div class="sched-name">艺术创作</div>
+          <div class="sched-who">小羊羊带领</div>
+        </div>
+        <div class="sched-card fade-up">
+          <div class="sched-time">🌻 16:00</div>
+          <div class="sched-icon">✏️</div>
+          <div class="sched-name">写作分享会</div>
+          <div class="sched-who">小人人主持</div>
+        </div>
+        <div class="sched-card fade-up">
+          <div class="sched-time">🌙 20:00</div>
+          <div class="sched-icon">⭐</div>
+          <div class="sched-name">星空冥想</div>
+          <div class="sched-who">四人共享</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    // --- Arms ---
-    const armSwing = Math.cos(walkPhase) * 10 * scale;
-    ctx.strokeStyle = type.color;
-    ctx.lineWidth = 5 * scale;
-    // Left arm
-    ctx.beginPath();
-    ctx.moveTo(cx - 10*scale, shoulderY + 4*scale);
-    ctx.lineTo(cx - 10*scale - armLen, shoulderY + 14*scale + armSwing);
-    ctx.stroke();
-    // Right arm
-    ctx.beginPath();
-    ctx.moveTo(cx + 10*scale, shoulderY + 4*scale);
-    ctx.lineTo(cx + 10*scale + armLen*0.3, shoulderY + 14*scale - armSwing);
-    ctx.stroke();
+  <!-- ===== 名言墙 ===== -->
+  <section id="quotes">
+    <div class="section">
+      <h2 class="section-title"><span class="emoji">💬</span>学霸名言墙<span class="emoji">💬</span></h2>
+      <div class="quotes-grid">
+        <div class="quote-card fade-up">
+          <div class="quote-text">学习不是为了变得完美，而是为了每天比昨天的自己更好一点点。</div>
+          <div class="quote-author">🐬 小海豚 <span>· 溪边晨读</span></div>
+        </div>
+        <div class="quote-card fade-up">
+          <div class="quote-text">当你觉得累的时候，不是要停下来，而是要想想为什么出发。</div>
+          <div class="quote-author">🧒 小人人 <span>· 山顶日记</span></div>
+        </div>
+        <div class="quote-card fade-up">
+          <div class="quote-text">失败了一百次，就是离成功只有一步之遥了！重新来过吧！</div>
+          <div class="quote-author">🕷️ 蜘蛛侠 <span>· 实验室日志</span></div>
+        </div>
+        <div class="quote-card fade-up">
+          <div class="quote-text">音乐和绘画教会了我：世界上没有错误，只有还没被发现的美。</div>
+          <div class="quote-author">🐑 小羊羊 <span>· 艺术小日记</span></div>
+        </div>
+        <div class="quote-card fade-up">
+          <div class="quote-text">玩耍是孩子最认真的工作，在玩中学，才是最快乐的成长。</div>
+          <div class="quote-author">🌟 花狗山格言 <span>· 四人共创</span></div>
+        </div>
+        <div class="quote-card fade-up">
+          <div class="quote-text">帮助朋友进步，是比自己进步更有成就感的事。一起变强，才是真的强！</div>
+          <div class="quote-author">🌈 学霸四人组 <span>· 山霸大赛感言</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    // --- Head ---
-    ctx.fillStyle = '#FDBCB4'; // skin
-    ctx.beginPath();
-    ctx.arc(cx, headY, headR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#c9a090';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+  <!-- ===== 相册 ===== -->
+  <section id="gallery">
+    <div class="section">
+      <h2 class="section-title"><span class="emoji">📸</span>花狗山相册<span class="emoji">📸</span></h2>
+      <div class="gallery-grid">
+        <div class="gallery-item fade-up">
+          <img src="https://raw.githubusercontent.com/MikeRuan/ai-camp-assets/main/uploads/6e2e0e87-0360-4423-bbbc-f7814b149d97.jpg" alt="花狗山风景一" />
+          <div class="gallery-caption">🌿 花狗山的神秘森林深处</div>
+        </div>
+        <div class="gallery-item fade-up">
+          <img src="https://raw.githubusercontent.com/MikeRuan/ai-camp-assets/main/uploads/362fd68a-5b6f-4691-975d-94c54f77d8e8.jpg" alt="花狗山风景二" />
+          <div class="gallery-caption">☀️ 阳光照耀下的图书树</div>
+        </div>
+        <div class="gallery-item fade-up">
+          <img src="https://raw.githubusercontent.com/MikeRuan/ai-camp-assets/main/uploads/79bec90e-14ca-4f87-88e2-645ebf9bddf5.jpg" alt="花狗山风景三" />
+          <div class="gallery-caption">🌸 四人最爱的花狗山美景</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    // --- Eyes ---
-    ctx.fillStyle = '#2c3e50';
-    ctx.beginPath(); ctx.arc(cx - 4*scale, headY - 1*scale, 1.8*scale, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 4*scale, headY - 1*scale, 1.8*scale, 0, Math.PI*2); ctx.fill();
+  <!-- ===== 互动区 ===== -->
+  <section id="fun">
+    <div class="section">
+      <h2 class="section-title"><span class="emoji">🎮</span>和学霸们互动！<span class="emoji">🎮</span></h2>
+      <div class="fun-center">
+        <p style="color:#fffde0; font-size:1.1rem; margin-bottom:24px; text-shadow:1px 1px 4px rgba(0,0,0,0.2);">
+          点击下面的按钮，听听学霸们想对你说什么！
+        </p>
+        <div class="fun-buttons">
+          <button class="fun-btn btn-blue" id="btnDolphin">🐬 小海豚说</button>
+          <button class="fun-btn btn-pink" id="btnKid">🧒 小人人说</button>
+          <button class="fun-btn btn-red" id="btnSpider" style="background:#FF6B6B;color:#7a1a1a;">🕷️ 蜘蛛侠说</button>
+          <button class="fun-btn btn-green" id="btnSheep">🐑 小羊羊说</button>
+        </div>
+        <div id="fun-output"></div>
+      </div>
+    </div>
+  </section>
 
-    // --- Smile ---
-    ctx.strokeStyle = '#c0392b';
-    ctx.lineWidth = 1.2*scale;
-    ctx.beginPath();
-    ctx.arc(cx, headY + 2*scale, 4*scale, 0.1, Math.PI - 0.1);
-    ctx.stroke();
+  <!-- ===== 页脚 ===== -->
+  <footer>
+    <div class="footer-chars">🐬🧒🕷️🐑</div>
+    <p>🌸 花狗山学霸 · 用好奇心照亮每一天 🌸</p>
+    <p style="margin-top:8px; font-size:0.85rem; opacity:0.7;">蓝天白云 · 大山深林 · 好学 · 努力 · 爱玩 · 活泼</p>
+  </footer>
 
-    // ---- TYPE-SPECIFIC ACCESSORIES ----
-    if (type.id === 'businessman') {
-      // Briefcase in right hand
-      let bx = cx + 14*scale + armLen*0.3;
-      let by = shoulderY + 18*scale;
-      ctx.fillStyle = '#784212';
-      ctx.fillRect(bx, by, 14*scale, 10*scale);
-      ctx.strokeStyle = '#5d3d1f';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(bx, by, 14*scale, 10*scale);
-      // Handle
-      ctx.beginPath();
-      ctx.moveTo(bx + 4*scale, by);
-      ctx.lineTo(bx + 4*scale, by - 4*scale);
-      ctx.lineTo(bx + 10*scale, by - 4*scale);
-      ctx.lineTo(bx + 10*scale, by);
-      ctx.stroke();
-      // Hat
-      ctx.fillStyle = '#1a252f';
-      ctx.fillRect(cx - 14*scale, headY - headR - 12*scale, 28*scale, 12*scale);
-      ctx.fillRect(cx - 17*scale, headY - headR, 34*scale, 4*scale);
-    }
+  <script>
+    // 等待页面加载完毕再执行所有脚本
+    document.addEventListener('DOMContentLoaded', function() {
 
-    if (type.id === 'worker') {
-      // Clipboard in right hand
-      let bx = cx + 14*scale + armLen*0.3;
-      let by = shoulderY + 10*scale;
-      ctx.fillStyle = '#f0d9b5';
-      ctx.fillRect(bx, by, 12*scale, 16*scale);
-      ctx.fillStyle = '#aaa';
-      ctx.fillRect(bx + 3*scale, by - 3*scale, 6*scale, 5*scale);
-      ctx.strokeStyle = '#555';
-      ctx.lineWidth = 1;
-      for (let i=0;i<3;i++) {
-        ctx.beginPath();
-        ctx.moveTo(bx+2*scale, by+4*scale+i*4*scale);
-        ctx.lineTo(bx+10*scale, by+4*scale+i*4*scale);
-        ctx.stroke();
-      }
-    }
+      // ===== 互动区内容 =====
+      var dolphinMessages = [
+        "🐬 嗨！我是小海豚！数学题就像大海里的浪，越游越有趣！你今天做了几道题呢？",
+        "🐬 每天清晨游一次溪水，大脑就会变得超级清醒！快去试试吧！",
+        "🐬 数字是宇宙的语言，学好数学，你就能理解整个世界的秘密！",
+        "🐬 失败？那只是说明你已经比昨天更努力了！再来一次！",
+      ];
 
-    if (type.id === 'family') {
-      // Small child beside
-      let childX = cx + 20*scale;
-      let childScale = scale * 0.55;
-      let childH = 90 * childScale;
-      let cBaseY = baseY;
-      let cLegSwing = Math.sin(walkPhase + 0.5) * 8 * childScale;
-      let cShoulderY = cBaseY - 28*childScale - 30*childScale;
-      let cNeckY = cShoulderY - 2*childScale;
-      let cHeadY = cNeckY - 12*childScale;
-      // Child legs
-      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2*childScale;
-      ctx.beginPath(); ctx.moveTo(childX, cShoulderY+30*childScale);
-      ctx.lineTo(childX-5*childScale+cLegSwing, cBaseY); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(childX, cShoulderY+30*childScale);
-      ctx.lineTo(childX+5*childScale-cLegSwing, cBaseY); ctx.stroke();
-      // Child body
-      ctx.fillStyle = '#58d68d';
-      ctx.fillRect(childX-9*childScale, cShoulderY, 18*childScale, 30*childScale);
-      // Child arms
-      ctx.strokeStyle = '#58d68d'; ctx.lineWidth = 4*childScale;
-      ctx.beginPath(); ctx.moveTo(childX-9*childScale, cShoulderY+4*childScale);
-      ctx.lineTo(childX-9*childScale-14*childScale, cShoulderY+14*childScale); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(childX+9*childScale, cShoulderY+4*childScale);
-      ctx.lineTo(childX+9*childScale+6*childScale, cShoulderY+14*childScale); ctx.stroke();
-      // Child head
-      ctx.fillStyle = '#FDBCB4';
-      ctx.beginPath(); ctx.arc(childX, cHeadY, 12*childScale, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#c9a090'; ctx.lineWidth=1; ctx.stroke();
-      // Child eyes
-      ctx.fillStyle = '#2c3e50';
-      ctx.beginPath(); ctx.arc(childX-3*childScale, cHeadY, 1.5*childScale,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(childX+3*childScale, cHeadY, 1.5*childScale,0,Math.PI*2); ctx.fill();
-      // Connecting hand
-      ctx.strokeStyle = '#FDBCB4'; ctx.lineWidth = 3*scale;
-      ctx.beginPath();
-      ctx.moveTo(cx - 10*scale, shoulderY + bodyH - 8*scale);
-      ctx.lineTo(childX + 9*childScale + 6*childScale, cShoulderY + 14*childScale);
-      ctx.stroke();
-    }
+      var kidMessages = [
+        "🧒 小人人在这里！写下你的感受吧——哪怕只有一行字，那也是你独一无二的故事！",
+        "🧒 每一棵树都有自己的故事，每一个你也是！别害怕表达自己！",
+        "🧒 今天有什么让你开心的事吗？把它写下来，变成诗！",
+        "🧒 阅读一本好书，就像交了一个新朋友。你最近在读什么呢？",
+      ];
 
-    if (type.id === 'couple') {
-      // Second person (partner) beside
-      let px = cx + 22*scale;
-      let pSwing = Math.sin(walkPhase + 0.3) * 14 * scale;
-      let pShoulderY = baseY - legH - bodyH;
-      // Partner legs
-      ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 2*scale;
-      ctx.beginPath(); ctx.moveTo(px, pShoulderY+bodyH); ctx.lineTo(px-7*scale+pSwing, baseY); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(px, pShoulderY+bodyH); ctx.lineTo(px+7*scale-pSwing, baseY); ctx.stroke();
-      // Partner body
-      ctx.fillStyle = '#c39bd3';
-      ctx.beginPath(); ctx.roundRect(px-11*scale, pShoulderY, 22*scale, bodyH, 4*scale); ctx.fill();
-      // Partner arms
-      ctx.strokeStyle = '#c39bd3'; ctx.lineWidth = 5*scale;
-      ctx.beginPath(); ctx.moveTo(px-10*scale, pShoulderY+4*scale); ctx.lineTo(px-20*scale, pShoulderY+16*scale+pSwing*0.4); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(px+10*scale, pShoulderY+4*scale); ctx.lineTo(px+13*scale, pShoulderY+16*scale-pSwing*0.4); ctx.stroke();
-      // Partner head
-      ctx.fillStyle = '#FDBCB4';
-      ctx.beginPath(); ctx.arc(px, neckY - headR, headR, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#c9a090'; ctx.lineWidth=1.5; ctx.stroke();
-      // Partner eyes
-      ctx.fillStyle = '#2c3e50';
-      ctx.beginPath(); ctx.arc(px-4*scale, neckY-headR-1*scale, 1.8*scale,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(px+4*scale, neckY-headR-1*scale, 1.8*scale,0,Math.PI*2); ctx.fill();
-      // Holding hands line
-      ctx.strokeStyle = '#FDBCB4'; ctx.lineWidth = 3*scale;
-      ctx.beginPath();
-      ctx.moveTo(cx+10*scale+armLen*0.3, shoulderY+14*scale);
-      ctx.lineTo(px-20*scale, pShoulderY+16*scale);
-      ctx.stroke();
-      // Heart above
-      ctx.fillStyle = '#e74c3c'; ctx.font = `${14*scale}px Arial`;
-      ctx.fillText('♥', cx+11*scale, shoulderY - 6*scale);
-    }
+      var spiderMessages = [
+        "🕷️ 我是蜘蛛侠！科学实验失败了？完美！记录下来，下次就成功了！",
+        "🕷️ 发明创造从来不是一步到位的，每一次'不行'都是在告诉你'快到了'！",
+        "🕷️ 今天我用蛛网做了一个新望远镜！你有什么天马行空的想法吗？",
+        "🕷️ 好奇心是最好的老师！什么都可以问，什么都可以试！",
+      ];
 
-    if (type.id === 'kid') {
-      // Teddy bear in arms
-      let bx = cx + 10*scale + armLen*0.3;
-      let by = shoulderY + 8*scale;
-      // Bear body
-      ctx.fillStyle = '#c8a46e';
-      ctx.beginPath(); ctx.ellipse(bx+6*scale, by+7*scale, 7*scale, 8*scale, 0, 0, Math.PI*2); ctx.fill();
-      // Bear head
-      ctx.beginPath(); ctx.arc(bx+6*scale, by+1*scale, 6*scale, 0, Math.PI*2); ctx.fill();
-      // Bear ears
-      ctx.beginPath(); ctx.arc(bx+1*scale, by-4*scale, 3*scale, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(bx+11*scale, by-4*scale, 3*scale, 0, Math.PI*2); ctx.fill();
-      // Bear face
-      ctx.fillStyle = '#8b6914';
-      ctx.beginPath(); ctx.arc(bx+4*scale, by+1*scale, 1.2*scale,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(bx+8*scale, by+1*scale, 1.2*scale,0,Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(bx+6*scale, by+3.5*scale, 2*scale,0,Math.PI*2); ctx.fill();
-    }
+      var sheepMessages = [
+        "🐑 小羊羊来啦~你今天有没有发现身边一件美丽的小事？把它画下来或者哼出来！",
+        "🐑 音乐能治愈一切！当你难过的时候，唱一首歌，世界就会不一样！",
+        "🐑 艺术没有对错，只有你独特的眼睛看到的世界。大胆去创作！",
+        "🐑 我最喜欢的颜色是山上的粉红色花朵——你最喜欢什么颜色呢？",
+      ];
 
-    if (type.id === 'tourist') {
-      // Rolling suitcase being pulled
-      let sx = cx + 16*scale; // suitcase behind (to the right if moving left, adjust)
-      let sy = baseY - 28*scale;
-      // Handle extending up
-      ctx.strokeStyle = '#555'; ctx.lineWidth = 2*scale;
-      ctx.beginPath();
-      ctx.moveTo(cx - 12*scale, shoulderY + 10*scale);
-      ctx.lineTo(sx + 5*scale, sy - 18*scale);
-      ctx.stroke();
-      // Handle top
-      ctx.beginPath();
-      ctx.moveTo(sx + 2*scale, sy - 18*scale);
-      ctx.lineTo(sx + 8*scale, sy - 18*scale);
-      ctx.stroke();
-      // Suitcase body
-      ctx.fillStyle = '#e67e22';
-      ctx.fillRect(sx, sy, 20*scale, 24*scale);
-      ctx.strokeStyle = '#a04000'; ctx.lineWidth = 1.5*scale;
-      ctx.strokeRect(sx, sy, 20*scale, 24*scale);
-      // Suitcase stripes
-      ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.5*scale;
-      ctx.beginPath(); ctx.moveTo(sx, sy+8*scale); ctx.lineTo(sx+20*scale, sy+8*scale); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(sx, sy+16*scale); ctx.lineTo(sx+20*scale, sy+16*scale); ctx.stroke();
-      // Wheels
-      ctx.fillStyle = '#2c3e50';
-      ctx.beginPath(); ctx.arc(sx+4*scale, baseY-2*scale, 4*scale, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.arc(sx+16*scale, baseY-2*scale, 4*scale, 0, Math.PI*2); ctx.fill();
-    }
+      var funOutput = document.getElementById('fun-output');
 
-    if (type.id === 'beggar') {
-      // Large backpack on back
-      let bx = cx + 10*scale;
-      let by = shoulderY - 5*scale;
-      // Big overstuffed bag
-      ctx.fillStyle = '#4a4a4a';
-      ctx.beginPath(); ctx.ellipse(bx+10*scale, by+20*scale, 14*scale, 20*scale, -0.2, 0, Math.PI*2); ctx.fill();
-      ctx.strokeStyle = '#2c2c2c'; ctx.lineWidth = 1.5*scale; ctx.stroke();
-      // Bag straps
-      ctx.strokeStyle = '#333'; ctx.lineWidth = 2.5*scale;
-      ctx.beginPath(); ctx.moveTo(bx+2*scale, by+4*scale); ctx.lineTo(cx-3*scale, shoulderY+22*scale); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(bx+12*scale, by+4*scale); ctx.lineTo(cx+3*scale, shoulderY+22*scale); ctx.stroke();
-      // Stuff sticking out
-      ctx.fillStyle = '#7f8c8d';
-      ctx.beginPath(); ctx.ellipse(bx+8*scale, by-2*scale, 5*scale, 5*scale, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(bx+15*scale, by+2*scale, 4*scale, 4*scale, 0, 0, Math.PI*2); ctx.fill();
-    }
-  }
-
-  // ===================== BACKGROUND =====================
-  function drawBackground() {
-    // Sky gradient
-    const sky = ctx.createLinearGradient(0, 0, 0, 300);
-    sky.addColorStop(0, '#87CEEB');
-    sky.addColorStop(1, '#FDB97D');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, 800, 500);
-
-    // Sun
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath(); ctx.arc(720, 60, 40, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,215,0,0.3)';
-    ctx.beginPath(); ctx.arc(720, 60, 55, 0, Math.PI*2); ctx.fill();
-
-    // Clouds (static)
-    drawCloud(100, 70, 0.8);
-    drawCloud(320, 50, 1.0);
-    drawCloud(560, 80, 0.7);
-
-    // Buildings far back
-    drawBuilding(30, 280, 80, 170, '#b0c4de');
-    drawBuilding(120, 250, 60, 200, '#a9c8d4');
-    drawBuilding(190, 260, 90, 190, '#8faabc');
-    drawBuilding(290, 230, 70, 220, '#9db8cc');
-    drawBuilding(370, 270, 100, 180, '#aab8c2');
-    drawBuilding(480, 240, 65, 210, '#95aabd');
-    drawBuilding(555, 255, 85, 195, '#8fa8bb');
-    drawBuilding(650, 245, 75, 205, '#9db5c8');
-    drawBuilding(735, 260, 80, 190, '#a8bfcd');
-
-    // Buildings mid
-    drawBuilding(0, 320, 70, 130, '#e8d5b7');
-    drawBuilding(80, 310, 55, 140, '#dcc9a8');
-    drawBuilding(145, 305, 80, 145, '#e6d4ba');
-    drawBuilding(235, 300, 60, 150, '#d9c8a5');
-    drawBuilding(305, 315, 75, 135, '#e0ceaf');
-    drawBuilding(390, 300, 90, 150, '#d8c7a0');
-    drawBuilding(490, 310, 65, 140, '#dcc9a8');
-    drawBuilding(565, 305, 80, 145, '#e2d0b2');
-    drawBuilding(655, 300, 70, 150, '#d9c8a5');
-    drawBuilding(735, 315, 65, 135, '#e0ceaf');
-
-    // Ground
-    ctx.fillStyle = '#c8a96e';
-    ctx.fillRect(0, 440, 800, 60);
-    // Sidewalk
-    ctx.fillStyle = '#d4c5a9';
-    ctx.fillRect(0, 440, 800, 15);
-    // Sidewalk lines
-    ctx.strokeStyle = '#b8a890';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < 800; x += 60) {
-      ctx.beginPath(); ctx.moveTo(x, 440); ctx.lineTo(x, 455); ctx.stroke();
-    }
-    // Road
-    ctx.fillStyle = '#555';
-    ctx.fillRect(0, 455, 800, 45);
-    // Road lines
-    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3; ctx.setLineDash([30, 20]);
-    ctx.beginPath(); ctx.moveTo(0, 478); ctx.lineTo(800, 478); ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Palm trees
-    drawPalmTree(60, 440);
-    drawPalmTree(260, 440);
-    drawPalmTree(500, 440);
-    drawPalmTree(720, 440);
-  }
-
-  function drawCloud(x, y, s) {
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.beginPath(); ctx.arc(x, y, 22*s, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x+28*s, y+5*s, 18*s, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x-22*s, y+8*s, 15*s, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x+8*s, y+10*s, 20*s, 0, Math.PI*2); ctx.fill();
-  }
-
-  function drawBuilding(x, y, w, h, color) {
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, w, h);
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, w, h);
-    // Windows
-    ctx.fillStyle = 'rgba(255,255,200,0.6)';
-    for (let row = 0; row < Math.floor(h/22); row++) {
-      for (let col = 0; col < Math.floor(w/18); col++) {
-        if ((row + col) % 3 !== 0) {
-          ctx.fillRect(x+4+col*18, y+5+row*22, 9, 11);
-        }
-      }
-    }
-  }
-
-  function drawPalmTree(x, y) {
-    // Trunk
-    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.bezierCurveTo(x-5, y-30, x+5, y-60, x, y-80); ctx.stroke();
-    // Leaves
-    ctx.strokeStyle = '#228B22'; ctx.lineWidth = 4;
-    const leaves = [[0,-80],[-25,-95],[-40,-80],[-20,-70],[25,-95],[40,-80],[20,-70],[0,-65]];
-    leaves.forEach(([lx,ly])=>{
-      ctx.beginPath(); ctx.moveTo(x,y-80); ctx.lineTo(x+lx, y+ly); ctx.stroke();
-    });
-    // Coconuts
-    ctx.fillStyle = '#8B4513';
-    ctx.beginPath(); ctx.arc(x-5, y-82, 4, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x+5, y-85, 4, 0, Math.PI*2); ctx.fill();
-  }
-
-  // ===================== PERSON SPAWNING =====================
-  function spawnPerson() {
-    const typeIndex = Math.floor(Math.random() * personTypes.length);
-    const type = personTypes[typeIndex];
-    const isKid = (type.id === 'kid');
-    const scale = isKid ? 0.6 : 1.0;
-    const speed = (1.5 + Math.random() * 1.5) * (isKid ? 1.3 : 1);
-    const fromLeft = Math.random() > 0.5;
-    const x = fromLeft ? -50 : 850;
-    const dir = fromLeft ? 1 : -1;
-    const y = 438 - (isKid ? 0 : 2); // base foot Y
-
-    persons.push({
-      x, y, dir, speed, type, scale,
-      walkPhase: Math.random() * Math.PI * 2,
-      clicked: false,
-      clickEffect: 0, // 0=none, countdown to remove
-      hitbox: { w: isKid ? 60 : 80, h: isKid ? 70 : 110 }
-    });
-  }
-
-  // ===================== FLOATING TEXT =====================
-  function spawnFloatText(x, y, good) {
-    floatingTexts.push({ x, y, text: good ? '+1 ✓' : '-1 ✗', good, life: 1.0 });
-  }
-
-  function updateFloatTexts(dt) {
-    floatingTexts.forEach(ft => { ft.y -= 1.5; ft.life -= dt * 1.5; });
-    floatingTexts = floatingTexts.filter(ft => ft.life > 0);
-  }
-
-  function drawFloatTexts() {
-    floatingTexts.forEach(ft => {
-      ctx.globalAlpha = ft.life;
-      ctx.font = 'bold 22px Arial';
-      ctx.fillStyle = ft.good ? '#2ecc71' : '#e74c3c';
-      ctx.textAlign = 'center';
-      ctx.fillText(ft.text, ft.x, ft.y);
-      ctx.globalAlpha = 1;
-    });
-    ctx.textAlign = 'left';
-  }
-
-  // ===================== CLICK DETECTION =====================
-  function getCanvasPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY
-    };
-  }
-
-  canvas.addEventListener('click', function(e) {
-    if (!gameRunning) return;
-    const pos = getCanvasPos(e);
-    for (let i = persons.length - 1; i >= 0; i--) {
-      const p = persons[i];
-      if (p.clicked) continue;
-      const hw = p.hitbox.w / 2;
-      const hh = p.hitbox.h;
-      // Person center x is p.x; feet at p.y
-      if (pos.x >= p.x - hw && pos.x <= p.x + hw &&
-          pos.y >= p.y - hh && pos.y <= p.y) {
-        p.clicked = true;
-        p.clickEffect = 0.8;
-        const good = p.type.good;
-        score += good ? 1 : -1;
-        if (score < 0) score = 0;
-        hudScore.textContent = score + ' / 5';
-        spawnFloatText(p.x, p.y - hh * 0.7, good);
-        // Remove person after brief flash
-        setTimeout(() => {
-          const idx = persons.indexOf(p);
-          if (idx !== -1) persons.splice(idx, 1);
-        }, 400);
-        break;
-      }
-    }
-  });
-
-  // ===================== TOOLTIP =====================
-  canvas.addEventListener('mousemove', function(e) {
-    if (!gameRunning) return;
-    const pos = getCanvasPos(e);
-    let found = false;
-    for (let i = persons.length - 1; i >= 0; i--) {
-      const p = persons[i];
-      const hw = p.hitbox.w / 2;
-      const hh = p.hitbox.h;
-      if (pos.x >= p.x - hw && pos.x <= p.x + hw &&
-          pos.y >= p.y - hh && pos.y <= p.y) {
-        tooltip.style.display = 'block';
-        tooltip.style.left = (e.clientX - canvas.getBoundingClientRect().left + 15) + 'px';
-        tooltip.style.top  = (e.clientY - canvas.getBoundingClientRect().top - 30) + 'px';
-        const label = p.type.label + (p.type.good ? ' ✅ +1' : ' ❌ -1');
-        tooltip.textContent = label;
-        found = true;
-        canvas.style.cursor = 'pointer';
-        break;
-      }
-    }
-    if (!found) {
-      tooltip.style.display = 'none';
-      canvas.style.cursor = 'default';
-    }
-  });
-
-  canvas.addEventListener('mouseleave', function() {
-    tooltip.style.display = 'none';
-    canvas.style.cursor = 'default';
-  });
-
-  // ===================== GAME LOOP =====================
-  let lastTime = 0;
-  function gameLoop(ts) {
-    const dt = Math.min((ts - lastTime) / 1000, 0.1);
-    lastTime = ts;
-
-    // Clear
-    ctx.clearRect(0, 0, 800, 500);
-    drawBackground();
-
-    // Spawn
-    spawnTimer -= dt;
-    if (spawnTimer <= 0) {
-      spawnPerson();
-      spawnTimer = 0.8 + Math.random() * 0.8;
-    }
-
-    // Update & draw persons
-    persons = persons.filter(p => p.x > -150 && p.x < 950);
-    persons.forEach(p => {
-      if (!p.clicked) p.x += p.dir * p.speed;
-      p.walkPhase += dt * 6 * (p.clicked ? 0 : 1);
-
-      // Click flash effect
-      if (p.clicked) {
-        ctx.save();
-        ctx.globalAlpha = p.clickEffect;
-        ctx.fillStyle = p.type.good ? 'rgba(46,204,113,0.3)' : 'rgba(231,76,60,0.3)';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y - p.hitbox.h/2, 40*p.scale, 0, Math.PI*2);
-        ctx.fill();
-        ctx.restore();
-        p.clickEffect = Math.max(0, p.clickEffect - dt * 2);
+      // 显示消息的函数
+      function showMessage(messages, color) {
+        var msg = messages[Math.floor(Math.random() * messages.length)];
+        funOutput.style.display = 'block';
+        funOutput.style.borderLeft = '5px solid ' + color;
+        funOutput.style.opacity = '0';
+        funOutput.style.transform = 'translateY(10px)';
+        funOutput.style.transition = 'opacity 0.4s, transform 0.4s';
+        funOutput.textContent = msg;
+        // 触发动画
+        requestAnimationFrame(function() {
+          funOutput.style.opacity = '1';
+          funOutput.style.transform = 'translateY(0)';
+        });
       }
 
-      drawPerson(p.x, p.y, p.type, p.walkPhase, p.scale);
-    });
+      // 绑定每个按钮
+      var btnDolphin = document.getElementById('btnDolphin');
+      if (btnDolphin) btnDolphin.addEventListener('click', function() {
+        showMessage(dolphinMessages, '#87CEEB');
+      });
 
-    // Floating texts
-    updateFloatTexts(dt);
-    drawFloatTexts();
+      var btnKid = document.getElementById('btnKid');
+      if (btnKid) btnKid.addEventListener('click', function() {
+        showMessage(kidMessages, '#FFB6C1');
+      });
 
-    // Score check
-    if (score >= 5) {
-      winLevel();
-      return;
-    }
+      var btnSpider = document.getElementById('btnSpider');
+      if (btnSpider) btnSpider.addEventListener('click', function() {
+        showMessage(spiderMessages, '#FF6B6B');
+      });
 
-    if (gameRunning) animFrameId = requestAnimationFrame(gameLoop);
-  }
+      var btnSheep = document.getElementById('btnSheep');
+      if (btnSheep) btnSheep.addEventListener('click', function() {
+        showMessage(sheepMessages, '#90EE90');
+      });
 
-  // ===================== TIMER =====================
-  function startTimer() {
-    timeLeft = 30;
-    hudTimer.textContent = timeLeft;
-    timerInterval = setInterval(() => {
-      if (!gameRunning) { clearInterval(timerInterval); return; }
-      timeLeft--;
-      hudTimer.textContent = timeLeft;
-      if (timeLeft <= 0) {
-        clearInterval(timerInterval);
-        gameRunning = false;
-        cancelAnimationFrame(animFrameId);
-        showFailScreen();
+      // ===== 滚动出现动画 =====
+      function checkFadeUp() {
+        var elements = document.querySelectorAll('.fade-up');
+        elements.forEach(function(el) {
+          var rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight - 60) {
+            el.classList.add('visible');
+          }
+        });
       }
-    }, 1000);
-  }
 
-  // ===================== WIN LEVEL =====================
-  function winLevel() {
-    gameRunning = false;
-    clearInterval(timerInterval);
-    cancelAnimationFrame(animFrameId);
-    tooltip.style.display = 'none';
+      // 初次检查
+      checkFadeUp();
+      // 滚动时检查
+      window.addEventListener('scroll', checkFadeUp);
 
-    if (level === 3) {
-      showTreasureScreen();
-    } else {
-      showCutscene();
-    }
-  }
+      // ===== 平滑滚动导航 =====
+      var navLinks = document.querySelectorAll('.nav-links a');
+      navLinks.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          var href = link.getAttribute('href');
+          if (href && href.startsWith('#')) {
+            e.preventDefault();
+            var target = document.querySelector(href);
+            if (target) {
+              target.scrollIntoView({ behavior: 'smooth' });
+            }
+          }
+        });
+      });
 
-  // ===================== CUTSCENE =====================
-  const cutsceneData = [
-    { emoji:'🍔', title:'第一关过了！', text:'辛苦了！去吃个汉堡庆祝 🍔\n明天继续拉客！' },
-    { emoji:'🍜', title:'第二关过了！', text:'不错嘛！奖励自己一碗拉面 🍜\n最后一关加油！' },
-  ];
-  let cutsceneBarInterval = null;
-  let cutsceneBarVal = 100;
+      // ===== 英雄图片悬停提示 =====
+      var heroImgWraps = document.querySelectorAll('.hero-img-wrap');
+      heroImgWraps.forEach(function(wrap) {
+        wrap.addEventListener('click', function() {
+          wrap.style.transform = 'scale(1.12) rotate(-2deg)';
+          setTimeout(function() {
+            wrap.style.transform = '';
+          }, 400);
+        });
+      });
 
-  function showCutscene() {
-    const data = cutsceneData[level - 1];
-    document.getElementById('cutsceneEmoji').textContent = data.emoji;
-    document.getElementById('cutsceneTitle').textContent = data.title;
-    document.getElementById('cutsceneText').textContent  = data.text;
-    const bar = document.getElementById('cutsceneBar');
-    cutsceneBarVal = 100;
-    bar.style.width = '100%';
-    cutsceneScreen.style.display = 'flex';
+    }); // end DOMContentLoaded
 
-    if (cutsceneBarInterval) clearInterval(cutsceneBarInterval);
-    cutsceneBarInterval = setInterval(() => {
-      cutsceneBarVal -= 1;
-      bar.style.width = cutsceneBarVal + '%';
-      if (cutsceneBarVal <= 0) {
-        clearInterval(cutsceneBarInterval);
-        advanceLevel();
-      }
-    }, 40); // 4 seconds total
-  }
-
-  function advanceLevel() {
-    clearInterval(cutsceneBarInterval);
-    cutsceneScreen.style.display = 'none';
-    level++;
-    startLevel();
-  }
-
-  // ===================== TREASURE SCREEN =====================
-  let treasureBarInterval = null;
-
-  function showTreasureScreen() {
-    const bar = document.getElementById('treasureBar');
-    let val = 100;
-    bar.style.width = '100%';
-    treasureScreen.style.display = 'flex';
-
-    if (treasureBarInterval) clearInterval(treasureBarInterval);
-    treasureBarInterval = setInterval(() => {
-      val -= 0.8;
-      bar.style.width = val + '%';
-      if (val <= 0) clearInterval(treasureBarInterval);
-    }, 40);
-  }
-
-  // ===================== FAIL SCREEN =====================
-  let failBarInterval = null;
-
-  function showFailScreen() {
-    const bar = document.getElementById('failBar');
-    let val = 100;
-    bar.style.width = '100%';
-    failScreen.style.display = 'flex';
-    tooltip.style.display = 'none';
-
-    if (failBarInterval) clearInterval(failBarInterval);
-    failBarInterval = setInterval(() => {
-      val -= 1;
-      bar.style.width = val + '%';
-      if (val <= 0) clearInterval(failBarInterval);
-    }, 40);
-  }
-
-  // ===================== START / RESET =====================
-  function startLevel() {
-    persons = [];
-    floatingTexts = [];
-    score = 0;
-    spawnTimer = 0;
-    hudLevel.textContent = level;
-    hudScore.textContent  = '0 / 5';
-    hudTimer.textContent  = '30';
-
-    canvas.style.display = 'block';
-    hud.style.display = 'flex';
-    cutsceneScreen.style.display = 'none';
-    failScreen.style.display     = 'none';
-    treasureScreen.style.display = 'none';
-
-    gameRunning = true;
-    lastTime = 0;
-    animFrameId = requestAnimationFrame(function(ts) { lastTime = ts; gameLoop(ts); });
-    startTimer();
-  }
-
-  function resetGame() {
-    clearInterval(timerInterval);
-    clearInterval(cutsceneBarInterval);
-    clearInterval(failBarInterval);
-    clearInterval(treasureBarInterval);
-    cancelAnimationFrame(animFrameId);
-    gameRunning = false;
-    level = 1;
-    cutsceneScreen.style.display = 'none';
-    failScreen.style.display     = 'none';
-    treasureScreen.style.display = 'none';
-    startLevel();
-  }
-
-  // ===================== BUTTON HANDLERS =====================
-  // Start button
-  document.getElementById('startBtn').addEventListener('click', function() {
-    startScreen.style.display = 'none';
-    level = 1;
-    startLevel();
-  });
-
-  // Cutscene skip button
-  document.getElementById('cutsceneSkipBtn').addEventListener('click', function() {
-    advanceLevel();
-  });
-
-  // Treasure next button (restart from level 1 or just show title again)
-  document.getElementById('treasureNextBtn').addEventListener('click', function() {
-    clearInterval(treasureBarInterval);
-    treasureScreen.style.display = 'none';
-    // Go back to start screen
-    canvas.style.display = 'none';
-    hud.style.display = 'none';
-    startScreen.style.display = 'flex';
-    level = 1;
-    gameRunning = false;
-  });
-
-  // Fail retry button
-  document.getElementById('failRetryBtn').addEventListener('click', function() {
-    clearInterval(failBarInterval);
-    failScreen.style.display = 'none';
-    // Retry same level
-    startLevel();
-  });
-
-  // ===================== CANVAS SCALING =====================
-  // Responsive scaling so the game fits any screen
-  function resizeGame() {
-    const container = document.getElementById('gameContainer');
-    const ww = window.innerWidth;
-    const wh = window.innerHeight;
-    const scale = Math.min(ww / 820, wh / 520);
-    container.style.transform = `scale(${scale})`;
-    container.style.transformOrigin = 'center center';
-  }
-  window.addEventListener('resize', resizeGame);
-  resizeGame();
-
-}); // end DOMContentLoaded
-</script>
+    // BUTTON CHECKLIST: #btnDolphin ✓  #btnKid ✓  #btnSpider ✓  #btnSheep ✓
+  </script>
 </body>
 </html>
