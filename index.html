@@ -1,1180 +1,777 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>老鹰抓鱼</title>
+<title>LA Property Agent - Catch the Right Clients!</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
-    background: #1a1a2e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
     font-family: 'Arial', sans-serif;
+    background: #87CEEB;
     overflow: hidden;
+    width: 100vw;
+    height: 100vh;
   }
+
   #gameContainer {
     position: relative;
-    width: 600px;
-    height: 700px;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
-    border-radius: 16px;
-    box-shadow: 0 0 40px rgba(0,150,255,0.5);
   }
-  #gameCanvas {
-    position: absolute;
-    top: 0; left: 0;
-    z-index: 1;
-    display: none;
-  }
+
+  /* ── START SCREEN ── */
   #startScreen {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
     z-index: 100;
-    pointer-events: auto;
-    background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 55%, #006994 55%, #004d6e 100%);
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 18px;
-  }
-  #startScreen h1 {
-    font-size: 48px;
-    color: #fff;
-    text-shadow: 3px 3px 0 #e07b00, -1px -1px 0 #c06000;
-    letter-spacing: 4px;
-  }
-  #startScreen p {
-    font-size: 15px;
-    color: #fff;
-    background: rgba(0,0,0,0.3);
-    padding: 10px 20px;
-    border-radius: 10px;
-    text-align: center;
-    line-height: 1.9;
-    max-width: 440px;
-  }
-  .menuBtn {
-    background: linear-gradient(135deg, #ff8c00, #ff4500);
-    color: white;
-    border: none;
-    padding: 14px 40px;
-    font-size: 20px;
-    border-radius: 30px;
-    cursor: pointer;
-    box-shadow: 0 5px 15px rgba(255,100,0,0.5);
-    transition: transform 0.1s;
     pointer-events: auto;
   }
-  .menuBtn:hover { transform: scale(1.07); }
+
+  #startScreen h1 {
+    font-size: 2.4em;
+    color: #FFD700;
+    text-shadow: 3px 3px 6px #000;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  #startScreen p {
+    color: #fff;
+    font-size: 1em;
+    margin: 6px 20px;
+    text-align: center;
+    max-width: 400px;
+  }
+
+  .rules-box {
+    background: rgba(255,255,255,0.1);
+    border: 2px solid #FFD700;
+    border-radius: 12px;
+    padding: 16px 22px;
+    margin: 14px 20px;
+    max-width: 420px;
+    color: #fff;
+    font-size: 0.9em;
+    line-height: 1.7;
+  }
+
+  .rules-box span.good { color: #7FFF00; font-weight: bold; }
+  .rules-box span.bad  { color: #FF6B6B; font-weight: bold; }
+
+  #startBtn {
+    margin-top: 18px;
+    padding: 14px 42px;
+    font-size: 1.3em;
+    font-weight: bold;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    color: #1a1a2e;
+    box-shadow: 0 6px 20px rgba(255,165,0,0.5);
+    transition: transform 0.15s;
+  }
+  #startBtn:hover { transform: scale(1.06); }
+
+  /* ── CANVAS ── */
+  #gameCanvas {
+    position: absolute;
+    z-index: 1;
+    top: 0; left: 0;
+    display: none;
+  }
+
+  /* ── REWARD SCREEN ── */
+  #rewardScreen {
+    position: absolute;
+    z-index: 200;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+
+  #rewardContent {
+    background: rgba(255,255,255,0.95);
+    border-radius: 20px;
+    padding: 30px 40px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    max-width: 380px;
+    animation: popIn 0.5s ease;
+  }
+
+  @keyframes popIn {
+    0%   { transform: scale(0.3); opacity: 0; }
+    80%  { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  #rewardEmoji { font-size: 5em; margin-bottom: 10px; display: block; }
+  #rewardTitle { font-size: 1.8em; font-weight: bold; color: #333; margin-bottom: 8px; }
+  #rewardDesc  { font-size: 1em; color: #555; margin-bottom: 20px; line-height: 1.5; }
+
+  #nextBtn {
+    padding: 12px 36px;
+    font-size: 1.1em;
+    font-weight: bold;
+    background: linear-gradient(135deg, #4CAF50, #2e7d32);
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(76,175,80,0.5);
+    transition: transform 0.15s;
+    pointer-events: auto;
+  }
+  #nextBtn:hover { transform: scale(1.06); }
+
+  /* ── FAIL SCREEN ── */
+  #failScreen {
+    position: absolute;
+    z-index: 200;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    background: rgba(0,0,0,0.5);
+  }
+
+  #failContent {
+    background: #fff;
+    border-radius: 20px;
+    padding: 30px 40px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    max-width: 360px;
+    animation: popIn 0.5s ease;
+  }
+
+  #failEmoji  { font-size: 4em; display: block; margin-bottom: 8px; }
+  #failTitle  { font-size: 1.7em; font-weight: bold; color: #c62828; margin-bottom: 8px; }
+  #failDesc   { font-size: 1em; color: #555; margin-bottom: 20px; }
+
+  #retryBtn {
+    padding: 12px 36px;
+    font-size: 1.1em;
+    font-weight: bold;
+    background: linear-gradient(135deg, #e53935, #b71c1c);
+    color: #fff;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(229,57,53,0.5);
+    transition: transform 0.15s;
+    pointer-events: auto;
+  }
+  #retryBtn:hover { transform: scale(1.06); }
+
+  /* ── HUD ── */
   #hud {
     position: absolute;
-    top: 10px; left: 10px; right: 10px;
     z-index: 50;
+    top: 0; left: 0; right: 0;
+    display: none;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 8px 18px;
+    font-size: 0.95em;
     display: none;
     justify-content: space-between;
     align-items: center;
     pointer-events: none;
   }
-  .hudBox {
-    background: rgba(0,0,0,0.45);
-    color: #fff;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 15px;
-    font-weight: bold;
-  }
-  #overlayScreen {
+
+  #hud span { font-weight: bold; }
+  #hud .score-good { color: #7FFF00; }
+  #hud .score-bad  { color: #FF6B6B; }
+
+  /* ── TOOLTIP ── */
+  #tooltip {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: 200;
-    pointer-events: auto;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    background: rgba(0,0,0,0.65);
-  }
-  #overlayScreen h2 {
-    font-size: 42px;
+    z-index: 60;
+    background: rgba(0,0,0,0.78);
     color: #fff;
-    text-shadow: 2px 2px 6px #000;
-  }
-  #overlayScreen p {
-    font-size: 18px;
-    color: #ffd700;
-    text-align: center;
-    line-height: 1.7;
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 0.82em;
+    pointer-events: none;
+    display: none;
+    white-space: nowrap;
+    transition: opacity 0.2s;
   }
 </style>
 </head>
 <body>
+
 <div id="gameContainer">
-  <canvas id="gameCanvas" width="600" height="700"></canvas>
 
+  <!-- Canvas (behind everything at start) -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
   <div id="hud">
-    <div class="hudBox" id="hudScore">分数: 0</div>
-    <div class="hudBox" id="hudLevel">第1关</div>
-    <div class="hudBox" id="hudLives">❤️❤️❤️</div>
+    <div>🏙️ <span id="levelLabel">Level 1</span></div>
+    <div>⭐ Score: <span id="scoreLabel" class="score-good">0</span> / 5</div>
+    <div>⏱️ <span id="timerLabel">30s</span></div>
   </div>
 
+  <!-- Tooltip -->
+  <div id="tooltip"></div>
+
+  <!-- START SCREEN -->
   <div id="startScreen">
-    <h1>🦅 老鹰抓鱼</h1>
-    <p>
-      🎮 方向键或 WASD 控制老鹰<br>
-      🐟 大鱼 +1.5分 &nbsp;中鱼 +1分 &nbsp;小鱼 +0.5分<br>
-      🦈 碰到鲨鱼失去一条命<br>
-      ⏱️ 在水中超过1.5秒会被推回水面！<br>
-      ⚠️ 返回途中碰到的鱼不得分，鱼会被推到水面！<br>
-      🌊 共三关：第1关6分 → 第2关12分 → 第3关18分！
-    </p>
-    <button class="menuBtn" id="startBtn">开始游戏</button>
+    <h1>🏘️ LA Property Agent</h1>
+    <p>You're a property agent in a small LA city.<br>Find the RIGHT clients — close the deal!</p>
+    <div class="rules-box">
+      <b>✅ Good clients (+1 pt):</b><br>
+      <span class="good">Business people, office workers, families, couples</span><br><br>
+      <b>❌ Wrong targets (−1 pt):</b><br>
+      <span class="bad">Kids 👦, Tourists 📸, Beggars 🧤</span><br><br>
+      🎯 Reach <b>5 points</b> before time runs out to pass!<br>
+      🏆 <b>Level 1</b> → 🍔 Burger reward<br>
+      🏆 <b>Level 2</b> → 🍽️ Restaurant dinner<br>
+      🏆 <b>Level 3</b> → 🏠 House reward<br>
+      💀 Fail → Eat grass on the roadside 🌿
+    </div>
+    <button id="startBtn">🚀 Start Game!</button>
   </div>
 
-  <div id="overlayScreen">
-    <h2 id="overlayTitle">过关！</h2>
-    <p id="overlayMsg">得分: 0</p>
-    <button class="menuBtn" id="overlayBtn">继续</button>
-    <button class="menuBtn" id="menuBtn" style="background:linear-gradient(135deg,#555,#222);">返回菜单</button>
+  <!-- REWARD SCREEN -->
+  <div id="rewardScreen">
+    <div id="rewardContent">
+      <span id="rewardEmoji">🏆</span>
+      <div id="rewardTitle">Level Complete!</div>
+      <div id="rewardDesc">You earned a reward!</div>
+      <button id="nextBtn">Next Level ▶</button>
+    </div>
   </div>
-</div>
+
+  <!-- FAIL SCREEN -->
+  <div id="failScreen">
+    <div id="failContent">
+      <span id="failEmoji">🌿</span>
+      <div id="failTitle">Mission Failed!</div>
+      <div id="failDesc">No deals today... you're eating grass by the roadside.</div>
+      <button id="retryBtn">Try Again 🔄</button>
+    </div>
+  </div>
+
+</div><!-- end gameContainer -->
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // ===== DOM =====
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas.getContext('2d');
+  // ─────────────────────────────────────────
+  //  DOM REFERENCES
+  // ─────────────────────────────────────────
   const startScreen  = document.getElementById('startScreen');
+  const rewardScreen = document.getElementById('rewardScreen');
+  const failScreen   = document.getElementById('failScreen');
   const hud          = document.getElementById('hud');
-  const overlayScreen= document.getElementById('overlayScreen');
-  const overlayTitle = document.getElementById('overlayTitle');
-  const overlayMsg   = document.getElementById('overlayMsg');
-  const overlayBtn   = document.getElementById('overlayBtn');
-  const menuBtn      = document.getElementById('menuBtn');
-  const hudScore     = document.getElementById('hudScore');
-  const hudLevel     = document.getElementById('hudLevel');
-  const hudLives     = document.getElementById('hudLives');
+  const canvas       = document.getElementById('gameCanvas');
+  const ctx          = canvas.getContext('2d');
+  const tooltip      = document.getElementById('tooltip');
 
-  // ===== Game State =====
-  let score = 0;        // internal ×10 (e.g. 6 pts = 60)
-  let lives = 3;
-  let level = 1;
-  let gameRunning = false;
-  let animId = null;
-  let levelClearing = false;
+  const startBtn  = document.getElementById('startBtn');
+  const nextBtn   = document.getElementById('nextBtn');
+  const retryBtn  = document.getElementById('retryBtn');
 
-  // ===== Underwater mechanic =====
-  let underwaterFrames = 0;
-  const UNDERWATER_LIMIT = 90;  // 1.5s × 60fps
-  let forcedReturn = false;
+  const levelLabel = document.getElementById('levelLabel');
+  const scoreLabel = document.getElementById('scoreLabel');
+  const timerLabel = document.getElementById('timerLabel');
 
-  // ===== Fish spawning =====
-  const FISH_MAX = { 1: 6, 2: 8, 3: 10 };
-  const SHARK_MAX = { 1: 1, 2: 2, 3: 3 };
-  const SPAWN_INTERVAL = { 1: 180, 2: 120, 3: 80 };
-  let spawnTimer = 0;
+  // ─────────────────────────────────────────
+  //  GAME STATE  (no localStorage!)
+  // ─────────────────────────────────────────
+  let level       = 1;
+  let score       = 0;
+  let timeLeft    = 30;
+  let timerID     = null;
+  let running     = false;
+  let people      = [];
+  let vehicles    = [];
+  let buildings   = [];
+  let clouds      = [];
+  let animFrame   = null;
 
-  // ===== Level config =====
-  // Score thresholds (×10 internally):
-  //   Level 1: reach  6 pts (60)  → clear
-  //   Level 2: reach 12 pts (120) → clear
-  //   Level 3: reach 18 pts (180) → clear
-  // Score is CUMULATIVE across levels — it never resets between levels.
-  const levelConfig = {
-    1: { windX:0,   windY:0,    waveAmp:10, waveSpeed:0.02,  rainCount:0,   fishCount:6, sharkCount:1, fishSpeed:1.5, targetScore:60  },
-    2: { windX:0.6, windY:0.15, waveAmp:30, waveSpeed:0.06,  rainCount:90,  fishCount:7, sharkCount:2, fishSpeed:1.5, targetScore:120 },
-    3: { windX:1.2, windY:0.3,  waveAmp:50, waveSpeed:0.095, rainCount:160, fishCount:8, sharkCount:3, fishSpeed:1.5, targetScore:180 }
-  };
+  // resize canvas to window
+  function resizeCanvas() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', () => { resizeCanvas(); buildScene(); });
 
-  // ===== Fish type table =====
-  const FISH_TYPES = [
-    { color:'#ff6600', size:27 },
-    { color:'#ffd700', size:25 },
-    { color:'#ff88aa', size:24 },
-    { color:'#00aaff', size:19 },
-    { color:'#00cc44', size:17 },
-    { color:'#aa44ff', size:16 },
-    { color:'#ff44cc', size:13 },
-    { color:'#ff2222', size:11 },
-    { color:'#44ffcc', size:10 },
+  // ─────────────────────────────────────────
+  //  PERSON TYPES
+  // ─────────────────────────────────────────
+  const PERSON_TYPES = [
+    { type:'business', label:'Business Person', emoji:'👔', good:true,  color:'#2c3e50' },
+    { type:'worker',   label:'Office Worker',   emoji:'💼', good:true,  color:'#34495e' },
+    { type:'family',   label:'Family',          emoji:'👨‍👩‍👧', good:true,  color:'#27ae60' },
+    { type:'couple',   label:'Couple',          emoji:'👫', good:true,  color:'#8e44ad' },
+    { type:'kid',      label:'Kid',             emoji:'👦', good:false, color:'#e74c3c' },
+    { type:'tourist',  label:'Tourist',         emoji:'📸', good:false, color:'#e67e22' },
+    { type:'beggar',   label:'Beggar',          emoji:'🧤', good:false, color:'#7f8c8d' },
   ];
 
-  function fishPoints(size) {
-    if (size >= 22) return 15;
-    if (size >= 15) return 10;
-    return 5;
-  }
-  function fishLabel(size) {
-    if (size >= 22) return '+1.5';
-    if (size >= 15) return '+1';
-    return '+0.5';
-  }
-  function displayScore(s) {
-    const v = s / 10;
-    if (Number.isInteger(v)) return String(v);
-    return v.toFixed(1);
+  // ─────────────────────────────────────────
+  //  BUILDING DEFINITIONS
+  // ─────────────────────────────────────────
+  const BUILDING_TYPES = [
+    { name:'House',       color:'#e8a87c', roofColor:'#c0392b', emoji:'🏠', w:70,  h:70  },
+    { name:'Burger Shop', color:'#f39c12', roofColor:'#d35400', emoji:'🍔', w:80,  h:80  },
+    { name:'Restaurant',  color:'#9b59b6', roofColor:'#6c3483', emoji:'🍽️',  w:90,  h:90  },
+    { name:'Office',      color:'#2980b9', roofColor:'#1a5276', emoji:'🏢', w:65,  h:110 },
+    { name:'House',       color:'#a8d8ea', roofColor:'#e74c3c', emoji:'🏠', w:70,  h:70  },
+    { name:'Office',      color:'#27ae60', roofColor:'#145a32', emoji:'🏢', w:65,  h:100 },
+  ];
+
+  // ─────────────────────────────────────────
+  //  SCENE SETUP
+  // ─────────────────────────────────────────
+  function buildScene() {
+    buildings = [];
+    clouds    = [];
+
+    const groundY = canvas.height * 0.62;
+    const bldCount = 7;
+    const spacing  = canvas.width / (bldCount + 1);
+
+    for (let i = 0; i < bldCount; i++) {
+      const btype = BUILDING_TYPES[i % BUILDING_TYPES.length];
+      const bx    = spacing * (i + 1);
+      buildings.push({
+        x: bx, y: groundY,
+        w: btype.w, h: btype.h,
+        color: btype.color, roofColor: btype.roofColor,
+        emoji: btype.emoji, name: btype.name
+      });
+    }
+
+    // clouds
+    for (let i = 0; i < 5; i++) {
+      clouds.push({
+        x: Math.random() * canvas.width,
+        y: 40 + Math.random() * 80,
+        r: 35 + Math.random() * 30,
+        speed: 0.3 + Math.random() * 0.3
+      });
+    }
   }
 
-  // ===== Eagle =====
-  const eagle = {
-    x:280, y:180,
-    w:52,  h:40,
-    vx:0,  vy:0,
-    speed:3.5,
-    wingPhase:0,
-    invincible:0
-  };
+  // ─────────────────────────────────────────
+  //  SPAWN PEOPLE & VEHICLES
+  // ─────────────────────────────────────────
+  const groundY = () => canvas.height * 0.62;
 
-  // ===== Input =====
-  const keys = {};
-  document.addEventListener('keydown', e => {
-    keys[e.key] = true;
-    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && gameRunning) {
-      e.preventDefault();
+  function spawnPerson() {
+    if (!running) return;
+    const tdata  = PERSON_TYPES[Math.floor(Math.random() * PERSON_TYPES.length)];
+    const fromLeft = Math.random() < 0.5;
+    const speed    = 1.2 + Math.random() * 1.4;
+    people.push({
+      x:    fromLeft ? -30 : canvas.width + 30,
+      y:    groundY() + 2,
+      vx:   fromLeft ? speed : -speed,
+      size: 28,
+      ...tdata,
+      clicked: false,
+      flash:   0,
+    });
+  }
+
+  function spawnVehicle() {
+    if (!running) return;
+    const fromLeft = Math.random() < 0.5;
+    const types = ['🚗','🚙','🚐','🚕'];
+    vehicles.push({
+      x:     fromLeft ? -60 : canvas.width + 60,
+      y:     groundY() - 24,
+      vx:    fromLeft ? 2.5 + Math.random() : -(2.5 + Math.random()),
+      emoji: types[Math.floor(Math.random() * types.length)],
+      size:  34,
+    });
+  }
+
+  // ─────────────────────────────────────────
+  //  DRAW HELPERS
+  // ─────────────────────────────────────────
+  function drawBackground() {
+    // sky gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.65);
+    skyGrad.addColorStop(0,   '#87CEEB');
+    skyGrad.addColorStop(1,   '#d4f1f9');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.65);
+
+    // ground
+    const gGrad = ctx.createLinearGradient(0, canvas.height * 0.65, 0, canvas.height);
+    gGrad.addColorStop(0, '#6dbb63');
+    gGrad.addColorStop(0.18, '#5a8f50');
+    gGrad.addColorStop(0.19, '#aaa');
+    gGrad.addColorStop(0.55, '#bbb');
+    gGrad.addColorStop(0.56, '#888');
+    gGrad.addColorStop(1,    '#777');
+    ctx.fillStyle = gGrad;
+    ctx.fillRect(0, canvas.height * 0.65, canvas.width, canvas.height * 0.35);
+
+    // road markings
+    const roadY = canvas.height * 0.685;
+    ctx.strokeStyle = '#FFE566';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([28, 18]);
+    ctx.beginPath();
+    ctx.moveTo(0, roadY + 18);
+    ctx.lineTo(canvas.width, roadY + 18);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawClouds() {
+    clouds.forEach(c => {
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(c.x,       c.y,      c.r,       0, Math.PI*2);
+      ctx.arc(c.x+c.r*0.7, c.y-c.r*0.3, c.r*0.7, 0, Math.PI*2);
+      ctx.arc(c.x-c.r*0.6, c.y-c.r*0.2, c.r*0.6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    });
+  }
+
+  function drawBuilding(b) {
+    // body
+    ctx.fillStyle = b.color;
+    ctx.fillRect(b.x - b.w/2, b.y - b.h, b.w, b.h);
+
+    // roof (triangle)
+    ctx.fillStyle = b.roofColor;
+    ctx.beginPath();
+    ctx.moveTo(b.x - b.w/2 - 6, b.y - b.h);
+    ctx.lineTo(b.x,               b.y - b.h - 26);
+    ctx.lineTo(b.x + b.w/2 + 6,  b.y - b.h);
+    ctx.closePath();
+    ctx.fill();
+
+    // windows
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    for (let row = 0; row < 2; row++) {
+      for (let col = 0; col < 2; col++) {
+        ctx.fillRect(
+          b.x - b.w/2 + 8 + col * (b.w/2 - 4),
+          b.y - b.h + 12 + row * 22,
+          b.w/2 - 14, 14
+        );
+      }
+    }
+
+    // door
+    ctx.fillStyle = '#5d4037';
+    ctx.fillRect(b.x - 10, b.y - 22, 20, 22);
+
+    // emoji label
+    ctx.font = '18px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(b.emoji, b.x, b.y - b.h - 32);
+
+    // name
+    ctx.font = 'bold 10px Arial';
+    ctx.fillStyle = '#333';
+    ctx.fillText(b.name, b.x, b.y + 11);
+  }
+
+  function drawPerson(p) {
+    ctx.save();
+    // flash green/red on click
+    if (p.flash > 0) {
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(p.flash * 0.8);
+    }
+    ctx.font = p.size + 'px Arial';
+    ctx.textAlign = 'center';
+    // shadow circle
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + 4, p.size * 0.45, 7, 0, 0, Math.PI*2);
+    ctx.fill();
+    // emoji
+    ctx.fillText(p.emoji, p.x, p.y);
+    ctx.restore();
+  }
+
+  function drawVehicle(v) {
+    ctx.save();
+    ctx.font = v.size + 'px Arial';
+    ctx.textAlign = 'center';
+    if (v.vx < 0) {
+      // flip
+      ctx.scale(-1,1);
+      ctx.fillText(v.emoji, -v.x, v.y);
+    } else {
+      ctx.fillText(v.emoji, v.x, v.y);
+    }
+    ctx.restore();
+  }
+
+  // ─────────────────────────────────────────
+  //  CLICK DETECTION
+  // ─────────────────────────────────────────
+  canvas.addEventListener('click', function(e) {
+    if (!running) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    let hit = false;
+    for (let i = people.length - 1; i >= 0; i--) {
+      const p = people[i];
+      const dx = mx - p.x;
+      const dy = my - p.y + p.size * 0.3;
+      if (Math.sqrt(dx*dx + dy*dy) < p.size * 0.65) {
+        // clicked!
+        const pts = p.good ? 1 : -1;
+        score = Math.max(-99, score + pts);
+        updateHUD();
+        showTooltip(p, e.clientX, e.clientY, pts);
+        p.flash = 15;
+        people.splice(i, 1);
+        hit = true;
+
+        // check win
+        if (score >= 5) {
+          endLevel(true);
+        }
+        break;
+      }
     }
   });
-  document.addEventListener('keyup', e => { keys[e.key] = false; });
 
-  // ===== Clouds =====
-  let clouds = [];
-  function initClouds() {
-    clouds = [];
-    for (let i = 0; i < 7; i++) {
-      clouds.push({
-        x: Math.random() * 700 - 50,
-        y: 20 + Math.random() * 140,
-        w: 70 + Math.random() * 90,
-        speed: 0.25 + Math.random() * 0.45,
-        alpha: 0.75 + Math.random() * 0.25,
-        r: 240+Math.floor(Math.random()*15),
-        g: 240+Math.floor(Math.random()*15),
-        b: 255
-      });
+  // touch support
+  canvas.addEventListener('touchstart', function(e) {
+    if (!running) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    canvas.dispatchEvent(new MouseEvent('click', {
+      clientX: t.clientX, clientY: t.clientY
+    }));
+  }, { passive: false });
+
+  // ─────────────────────────────────────────
+  //  TOOLTIP
+  // ─────────────────────────────────────────
+  function showTooltip(p, cx, cy, pts) {
+    tooltip.style.display = 'block';
+    tooltip.style.left    = (cx + 14) + 'px';
+    tooltip.style.top     = (cy - 20) + 'px';
+    if (pts > 0) {
+      tooltip.style.background = 'rgba(39,174,96,0.9)';
+      tooltip.textContent = '+1 ✅ ' + p.label;
+    } else {
+      tooltip.style.background = 'rgba(192,57,43,0.9)';
+      tooltip.textContent = '-1 ❌ ' + p.label;
     }
+    clearTimeout(tooltip._timer);
+    tooltip._timer = setTimeout(() => { tooltip.style.display = 'none'; }, 1200);
   }
 
-  // ===== Background Birds =====
-  let bgBirds = [];
-  function initBgBirds() {
-    bgBirds = [];
-    for (let i = 0; i < 5; i++) {
-      bgBirds.push({
-        x: Math.random() * 600,
-        y: 35 + Math.random() * 150,
-        speed: 0.5 + Math.random() * 0.9,
-        phase: Math.random() * Math.PI * 2,
-        size: 5 + Math.random() * 7,
-        color: ['#e07b00','#884400','#555555'][Math.floor(Math.random()*3)]
-      });
-    }
-  }
-
-  // ===== Rain =====
-  let rainDrops = [];
-  function initRain(count) {
-    rainDrops = [];
-    for (let i = 0; i < count; i++) {
-      rainDrops.push({
-        x: Math.random() * 700,
-        y: Math.random() * 700,
-        len: 9 + Math.random() * 13,
-        speed: 6 + Math.random() * 5
-      });
-    }
-  }
-
-  // ===== Waves =====
-  let waveOffset = 0;
-
-  // ===== Fish array =====
-  let fishes = [];
-
-  // ===== Create a single new fish (normal) =====
-  function createFish(cfg) {
-    const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
-    const dir = Math.random() < 0.5 ? 1 : -1;
-    const spawnEdge = Math.random() < 0.4;
-    const sx = spawnEdge ? (dir === 1 ? -ft.size : 600 + ft.size) : Math.random() * 560 + 20;
-    return {
-      x: sx,
-      y: 450 + Math.random() * 200,
-      vx: (0.4 + Math.random() * cfg.fishSpeed) * dir,
-      vy: (Math.random() - 0.5) * 0.6,
-      size: ft.size,
-      color: ft.color,
-      shark: false,
-      phase: Math.random() * Math.PI * 2,
-      alive: true,
-      beingPushed: false,
-      pushTimer: 0,
-      fadeIn: 30,
-    };
-  }
-
-  // ===== Create a single new shark =====
-  function createShark(cfg) {
-    const dir = Math.random() < 0.5 ? 1 : -1;
-    const sx = dir === 1 ? -35 : 635;
-    return {
-      x: sx,
-      y: 460 + Math.random() * 180,
-      vx: (0.8 + Math.random() * cfg.fishSpeed * 0.9) * dir,
-      vy: (Math.random() - 0.5) * 0.35,
-      size: 30,
-      color: '#778899',
-      shark: true,
-      phase: Math.random() * Math.PI * 2,
-      alive: true,
-      beingPushed: false,
-      pushTimer: 0,
-      fadeIn: 30,
-    };
-  }
-
-  // ===== Initial fish spawn =====
-  function spawnFish(cfg) {
-    fishes = [];
-    for (let i = 0; i < cfg.fishCount; i++) {
-      const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
-      const dir = Math.random() < 0.5 ? 1 : -1;
-      fishes.push({
-        x: Math.random() * 560 + 20,
-        y: 450 + Math.random() * 200,
-        vx: (0.4 + Math.random() * cfg.fishSpeed) * dir,
-        vy: (Math.random() - 0.5) * 0.6,
-        size: ft.size,
-        color: ft.color,
-        shark: false,
-        phase: Math.random() * Math.PI * 2,
-        alive: true,
-        beingPushed: false,
-        pushTimer: 0,
-        fadeIn: 0,
-      });
-    }
-    for (let i = 0; i < cfg.sharkCount; i++) {
-      const dir = Math.random() < 0.5 ? 1 : -1;
-      fishes.push({
-        x: Math.random() * 560 + 20,
-        y: 460 + Math.random() * 180,
-        vx: (0.8 + Math.random() * cfg.fishSpeed * 0.9) * dir,
-        vy: (Math.random() - 0.5) * 0.35,
-        size: 30,
-        color: '#778899',
-        shark: true,
-        phase: Math.random() * Math.PI * 2,
-        alive: true,
-        beingPushed: false,
-        pushTimer: 0,
-        fadeIn: 0,
-      });
-    }
-  }
-
-  // ===== Try to spawn new fish to keep the sea populated =====
-  function trySpawnFish() {
-    const cfg = levelConfig[level];
-    const maxFish  = FISH_MAX[level];
-    const maxShark = SHARK_MAX[level];
-    const aliveFish  = fishes.filter(f => f.alive && !f.shark).length;
-    const aliveShark = fishes.filter(f => f.alive && f.shark).length;
-    fishes = fishes.filter(f => f.alive);
-    if (aliveFish < maxFish)   fishes.push(createFish(cfg));
-    if (aliveShark < maxShark) fishes.push(createShark(cfg));
-  }
-
-  function seaY() { return 380; }
-
-  // ===== Init level =====
-  // Note: score is NOT reset here — it carries over between levels!
-  function initLevel(lv) {
-    level = lv;
-    levelClearing = false;
-    const cfg = levelConfig[lv];
-    eagle.x = 280; eagle.y = 180;
-    eagle.vx = 0; eagle.vy = 0;
-    eagle.invincible = 0;
-    underwaterFrames = 0;
-    forcedReturn = false;
-    popups = [];
-    particles = [];
-    spawnTimer = 0;
-    initClouds();
-    initBgBirds();
-    initRain(cfg.rainCount);
-    spawnFish(cfg);
-    waveOffset = 0;
-    hudLevel.textContent = `第${lv}关`;
-    updateHUD();
-  }
-
+  // ─────────────────────────────────────────
+  //  HUD
+  // ─────────────────────────────────────────
   function updateHUD() {
-    hudScore.textContent = `分数: ${displayScore(score)}`;
-    hudLives.textContent = '❤️'.repeat(Math.max(0, lives));
+    levelLabel.textContent = 'Level ' + level;
+    scoreLabel.textContent = score;
+    scoreLabel.style.color = score >= 0 ? '#7FFF00' : '#FF6B6B';
+    timerLabel.textContent = timeLeft + 's';
+    timerLabel.style.color = timeLeft <= 8 ? '#FF6B6B' : '#fff';
   }
 
-  // ===== Start game =====
-  function startGame() {
-    // Full reset including score on a brand-new game
-    score = 0; lives = 3; level = 1;
-    startScreen.style.display = 'none';
-    overlayScreen.style.display = 'none';
+  // ─────────────────────────────────────────
+  //  TIMER
+  // ─────────────────────────────────────────
+  function startTimer() {
+    timeLeft = 30;
+    updateHUD();
+    timerID = setInterval(function() {
+      if (!running) { clearInterval(timerID); return; }
+      timeLeft--;
+      updateHUD();
+      if (timeLeft <= 0) {
+        clearInterval(timerID);
+        endLevel(score >= 5);
+      }
+    }, 1000);
+  }
+
+  // ─────────────────────────────────────────
+  //  SPAWN INTERVALS
+  // ─────────────────────────────────────────
+  let spawnPeopleID = null;
+  let spawnCarID    = null;
+
+  function startSpawns() {
+    spawnPeopleID = setInterval(spawnPerson, 1400);
+    spawnCarID    = setInterval(spawnVehicle, 2800);
+    // spawn a few right away
+    spawnPerson(); spawnPerson(); spawnVehicle();
+  }
+
+  function stopSpawns() {
+    clearInterval(spawnPeopleID);
+    clearInterval(spawnCarID);
+  }
+
+  // ─────────────────────────────────────────
+  //  MAIN GAME LOOP
+  // ─────────────────────────────────────────
+  function gameLoop() {
+    if (!running) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // background & buildings
+    drawBackground();
+    drawClouds();
+    buildings.forEach(drawBuilding);
+
+    // move clouds
+    clouds.forEach(c => {
+      c.x += c.speed;
+      if (c.x - c.r > canvas.width) c.x = -c.r * 2;
+    });
+
+    // move & draw vehicles (below people)
+    vehicles = vehicles.filter(v => v.x > -100 && v.x < canvas.width + 100);
+    vehicles.forEach(v => {
+      v.x += v.vx;
+      drawVehicle(v);
+    });
+
+    // move & draw people
+    people = people.filter(p => p.x > -60 && p.x < canvas.width + 60);
+    people.forEach(p => {
+      p.x += p.vx;
+      if (p.flash > 0) p.flash--;
+      drawPerson(p);
+    });
+
+    animFrame = requestAnimationFrame(gameLoop);
+  }
+
+  // ─────────────────────────────────────────
+  //  START GAME / LEVEL
+  // ─────────────────────────────────────────
+  function startLevel() {
+    score   = 0;
+    running = true;
+    people  = [];
+    vehicles = [];
+
+    // show canvas & hud
     canvas.style.display = 'block';
-    hud.style.display = 'flex';
-    initLevel(1);
-    gameRunning = true;
-    if (animId) cancelAnimationFrame(animId);
+    hud.style.display    = 'flex';
+    startScreen.style.display  = 'none';
+    rewardScreen.style.display = 'none';
+    failScreen.style.display   = 'none';
+
+    buildScene();
+    updateHUD();
+    startTimer();
+    startSpawns();
     gameLoop();
   }
 
-  function showOverlay(title, msg, btnText) {
-    gameRunning = false;
-    overlayTitle.textContent = title;
-    overlayMsg.innerHTML = msg;
-    overlayBtn.textContent = btnText;
-    overlayScreen.style.display = 'flex';
+  // ─────────────────────────────────────────
+  //  END LEVEL
+  // ─────────────────────────────────────────
+  function endLevel(won) {
+    running = false;
+    clearInterval(timerID);
+    stopSpawns();
+    cancelAnimationFrame(animFrame);
+
+    if (won) {
+      showReward();
+    } else {
+      showFail();
+    }
   }
 
-  function goMenu() {
-    gameRunning = false;
-    if (animId) cancelAnimationFrame(animId);
-    overlayScreen.style.display = 'none';
-    canvas.style.display = 'none';
+  // ─────────────────────────────────────────
+  //  REWARD SCREEN CONTENT
+  // ─────────────────────────────────────────
+  const REWARDS = [
+    { emoji:'🍔', title:'Burger Time!',        desc:'You closed great deals!\nYour reward: a juicy LA burger. 🍔🎉' },
+    { emoji:'🍽️',  title:'Restaurant Dinner!',  desc:'Outstanding work, agent!\nEnjoy a fancy restaurant dinner. 🍽️✨' },
+    { emoji:'🏠',  title:'You Got the House!',  desc:'LEGENDARY agent! You earned\na beautiful LA house! 🏠🌴' },
+  ];
+
+  function showReward() {
+    const r = REWARDS[(level - 1) % REWARDS.length];
+    document.getElementById('rewardEmoji').textContent = r.emoji;
+    document.getElementById('rewardTitle').textContent = r.title;
+    document.getElementById('rewardDesc').textContent  = r.desc;
+    rewardScreen.style.background = level === 1
+      ? 'rgba(212,172,8,0.85)'
+      : level === 2
+        ? 'rgba(100,40,140,0.85)'
+        : 'rgba(20,90,40,0.85)';
+    rewardScreen.style.display = 'flex';
     hud.style.display = 'none';
-    startScreen.style.display = 'flex';
   }
 
-  // ===== Draw helpers =====
-
-  function drawCloud(c) {
-    ctx.save();
-    ctx.globalAlpha = c.alpha;
-    const col = `rgb(${c.r},${c.g},${c.b})`;
-    ctx.fillStyle = col;
-    ctx.shadowColor = 'rgba(100,150,255,0.2)';
-    ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.arc(c.x,          c.y,           c.w * 0.30, 0, Math.PI*2);
-    ctx.arc(c.x+c.w*0.26, c.y-c.w*0.11, c.w * 0.24, 0, Math.PI*2);
-    ctx.arc(c.x+c.w*0.52, c.y,           c.w * 0.27, 0, Math.PI*2);
-    ctx.arc(c.x+c.w*0.16, c.y+c.w*0.09, c.w * 0.20, 0, Math.PI*2);
-    ctx.arc(c.x+c.w*0.40, c.y+c.w*0.09, c.w * 0.18, 0, Math.PI*2);
-    ctx.fill();
-    ctx.globalAlpha = c.alpha * 0.25;
-    ctx.strokeStyle = '#aac0ff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
+  function showFail() {
+    failScreen.style.display = 'flex';
+    hud.style.display = 'none';
   }
 
-  function drawBgBird(b) {
-    ctx.save();
-    ctx.strokeStyle = b.color;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    const flap = Math.sin(b.phase) * b.size * 0.55;
-    ctx.beginPath();
-    ctx.moveTo(b.x - b.size, b.y + flap);
-    ctx.quadraticCurveTo(b.x - b.size*0.5, b.y - flap, b.x, b.y);
-    ctx.quadraticCurveTo(b.x + b.size*0.5, b.y - flap, b.x + b.size, b.y + flap);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function drawEagle() {
-    const e = eagle;
-    if (e.invincible > 0 && Math.floor(e.invincible/5)%2 === 0) return;
-    ctx.save();
-    ctx.translate(e.x, e.y);
-    if (e.vx < 0) ctx.scale(-1,1);
-    const flap = Math.sin(e.wingPhase) * 13;
-
-    ctx.save();
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#000';
-    ctx.beginPath();
-    ctx.ellipse(0, 16, 22, 7, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.restore();
-
-    ctx.fillStyle = '#8B4513';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = '#4a2008';
-    ctx.beginPath();
-    ctx.moveTo(-2, -4);
-    ctx.lineTo(-28, -11 + flap);
-    ctx.lineTo(-22, 5);
-    ctx.lineTo(-2, 6);
-    ctx.fill();
-
-    ctx.fillStyle = '#5C3310';
-    ctx.beginPath();
-    ctx.moveTo(4, -5);
-    ctx.lineTo(-12, -14 + flap);
-    ctx.lineTo(-6, 3);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.fillStyle = '#7a3a10';
-    ctx.beginPath();
-    ctx.moveTo(-17, 2);
-    ctx.lineTo(-31, 9);
-    ctx.lineTo(-26, -1);
-    ctx.fill();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(18, -7, 9, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(21.5, -9, 2.2, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(22.3, -9.5, 0.8, 0, Math.PI*2);
-    ctx.fill();
-
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath();
-    ctx.moveTo(25, -5.5);
-    ctx.lineTo(33, -3.5);
-    ctx.lineTo(25, -1.5);
-    ctx.fill();
-    ctx.fillStyle = '#e6b800';
-    ctx.beginPath();
-    ctx.moveTo(25, -3.5);
-    ctx.lineTo(33, -3.5);
-    ctx.lineTo(25, -1.5);
-    ctx.fill();
-
-    ctx.strokeStyle = '#FFD700';
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(5, 9); ctx.lineTo(8, 19);
-    ctx.moveTo(8, 19); ctx.lineTo(5, 22);
-    ctx.moveTo(8, 19); ctx.lineTo(11, 22);
-    ctx.moveTo(8, 19); ctx.lineTo(12, 18);
-    ctx.stroke();
-
-    ctx.restore();
-  }
-
-  function drawFish(f) {
-    if (!f.alive) return;
-    ctx.save();
-
-    if (f.fadeIn > 0) {
-      ctx.globalAlpha = 1 - (f.fadeIn / 30);
-      f.fadeIn--;
-    }
-
-    ctx.translate(f.x, f.y);
-    if (f.vx < 0) ctx.scale(-1,1);
-
-    if (f.shark) {
-      ctx.fillStyle = '#778899';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, f.size, f.size*0.42, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#5a6a7a';
-      ctx.beginPath();
-      ctx.moveTo(-2, -f.size*0.42);
-      ctx.lineTo(8, -f.size*1.0);
-      ctx.lineTo(16, -f.size*0.42);
-      ctx.fill();
-      ctx.fillStyle = '#5a6a7a';
-      ctx.beginPath();
-      ctx.moveTo(-f.size, 0);
-      ctx.lineTo(-f.size-14, -11);
-      ctx.lineTo(-f.size-14, 11);
-      ctx.fill();
-      ctx.fillStyle = '#000';
-      ctx.beginPath();
-      ctx.arc(f.size*0.5, -4, 3.5, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(f.size*0.5+1, -5, 1.2, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.moveTo(f.size*0.55, 3);
-      ctx.lineTo(f.size*0.65, 9);
-      ctx.lineTo(f.size*0.75, 3);
-      ctx.fill();
-      ctx.fillStyle = '#ff3333';
-      ctx.font = 'bold 10px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('⚠️', 0, -f.size - 4);
-    } else {
-      const grad = ctx.createRadialGradient(-f.size*0.2, -f.size*0.15, 1, 0, 0, f.size);
-      grad.addColorStop(0, lightenColor(f.color, 60));
-      grad.addColorStop(1, f.color);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.ellipse(0, 0, f.size, f.size*0.5, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = f.color;
-      ctx.beginPath();
-      ctx.moveTo(-f.size+2, 0);
-      ctx.lineTo(-f.size-10, -7);
-      ctx.lineTo(-f.size-10, 7);
-      ctx.fill();
-      ctx.fillStyle = lightenColor(f.color, 40) + 'bb';
-      ctx.beginPath();
-      ctx.moveTo(-3, -f.size*0.5);
-      ctx.lineTo(5, -f.size*0.5-7);
-      ctx.lineTo(10, -f.size*0.5);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(f.size*0.5, -3, 3.5, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#222';
-      ctx.beginPath();
-      ctx.arc(f.size*0.55, -3.5, 2, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(f.size*0.58, -4.2, 0.8, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = 1;
-      for (let s = -1; s <= 1; s++) {
-        ctx.beginPath();
-        ctx.arc(s*6, 0, 5, Math.PI*0.75, Math.PI*2.25);
-        ctx.stroke();
-      }
-      if (f.size >= 22) {
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('👑', 0, -f.size*0.5 - 9);
-      }
-      if (Math.sin(f.phase*1.7) > 0.7) {
-        ctx.save();
-        ctx.globalAlpha = 0.5;
-        ctx.strokeStyle = '#aef';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(f.size*0.3, -f.size*0.5 - 5, 3, 0, Math.PI*2);
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-    ctx.restore();
-  }
-
-  function lightenColor(hex, amt) {
-    let c = hex.replace('#','');
-    if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
-    const r = Math.min(255, parseInt(c.slice(0,2),16)+amt);
-    const g = Math.min(255, parseInt(c.slice(2,4),16)+amt);
-    const b = Math.min(255, parseInt(c.slice(4,6),16)+amt);
-    return `rgb(${r},${g},${b})`;
-  }
-
-  function drawSky() {
-    const sy = seaY();
-    const grad = ctx.createLinearGradient(0,0,0,sy);
-    const cfg = levelConfig[level];
-    if (cfg.rainCount > 80) {
-      grad.addColorStop(0,'#3a4a5a');
-      grad.addColorStop(1,'#607080');
-    } else if (cfg.rainCount > 0) {
-      grad.addColorStop(0,'#5a80aa');
-      grad.addColorStop(1,'#90b8d5');
-    } else {
-      grad.addColorStop(0,'#5ec8e8');
-      grad.addColorStop(1,'#a8e4f8');
-    }
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,0,600,sy);
-
-    if (levelConfig[level].rainCount === 0) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(520, 60, 32, 0, Math.PI*2);
-      const sunGrad = ctx.createRadialGradient(520,60,5,520,60,32);
-      sunGrad.addColorStop(0,'#fffbe0');
-      sunGrad.addColorStop(1,'#ffd000');
-      ctx.fillStyle = sunGrad;
-      ctx.shadowColor = '#ffd000';
-      ctx.shadowBlur = 20;
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  function drawSea(cfg) {
-    const sy = seaY();
-    const grad = ctx.createLinearGradient(0,sy,0,700);
-    grad.addColorStop(0,'#0096c7');
-    grad.addColorStop(1,'#023e6e');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0,sy,600,700-sy);
-
-    ctx.fillStyle = '#48cae4';
-    ctx.beginPath();
-    ctx.moveTo(0,sy);
-    for (let x=0; x<=600; x+=3) {
-      const y = sy + Math.sin(x*0.022 + waveOffset)*cfg.waveAmp
-                   + Math.sin(x*0.038 + waveOffset*1.4)*(cfg.waveAmp*0.45);
-      ctx.lineTo(x,y);
-    }
-    ctx.lineTo(600,700); ctx.lineTo(0,700);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.lineWidth = 2;
-    for (let w=0; w<3; w++) {
-      ctx.strokeStyle = `rgba(255,255,255,${0.22-w*0.05})`;
-      ctx.beginPath();
-      const off = waveOffset + w*1.3;
-      for (let x=0; x<=600; x+=5) {
-        const y = sy+10+w*14 + Math.sin(x*0.027+off)*cfg.waveAmp*0.55;
-        x===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-      }
-      ctx.stroke();
-    }
-
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    for (let x=0; x<600; x+=40) {
-      const y = sy + Math.sin(x*0.022+waveOffset)*cfg.waveAmp + 2;
-      ctx.beginPath();
-      ctx.arc(x + Math.sin(waveOffset)*5, y, 2.5, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-
-  function drawRain(cfg) {
-    if (!rainDrops.length) return;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(180,215,255,0.55)';
-    ctx.lineWidth = 1.2;
-    const angle = 0.25 + cfg.windX*0.1;
-    for (const r of rainDrops) {
-      ctx.beginPath();
-      ctx.moveTo(r.x, r.y);
-      ctx.lineTo(r.x + Math.sin(angle)*r.len*0.7, r.y + r.len);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function drawWind(cfg) {
-    if (cfg.windX < 0.3) return;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 1.5;
-    for (let i=0; i<10; i++) {
-      const y = 30 + i*32 + Math.random()*8;
-      const len = 25 + Math.random()*55;
-      const sx = Math.random()*600;
-      ctx.beginPath();
-      ctx.moveTo(sx, y);
-      ctx.lineTo(sx+len, y+2);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  function drawUnderwaterBar() {
-    if (underwaterFrames <= 0) return;
-    const ratio = Math.min(underwaterFrames / UNDERWATER_LIMIT, 1);
-    const barW = 170, barH = 13;
-    const bx = 300 - barW/2;
-    const by = seaY() + 12;
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath();
-    ctx.roundRect(bx-3, by-3, barW+6, barH+6, 7);
-    ctx.fill();
-
-    const r = Math.round(255*ratio);
-    const g = Math.round(255*(1-ratio));
-    ctx.fillStyle = `rgb(${r},${g},20)`;
-    ctx.beginPath();
-    ctx.roundRect(bx, by, barW*ratio, barH, 5);
-    ctx.fill();
-
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('⏱️ 在水里太久！快回去！', 300, by+barH+16);
-    ctx.restore();
-  }
-
-  // ===== Popups =====
-  let popups = [];
-  function addPopup(x,y,text,color) {
-    popups.push({x,y,text,color,life:65,vy:-1.6});
-  }
-  function drawPopups() {
-    for (const p of popups) {
-      ctx.save();
-      ctx.globalAlpha = p.life/65;
-      ctx.fillStyle = p.color || '#FFD700';
-      ctx.font = 'bold 22px Arial';
-      ctx.textAlign = 'center';
-      ctx.shadowColor = '#000';
-      ctx.shadowBlur = 4;
-      ctx.fillText(p.text, p.x, p.y);
-      ctx.restore();
-      p.y += p.vy;
-      p.life--;
-    }
-    popups = popups.filter(p=>p.life>0);
-  }
-
-  // ===== Particles =====
-  let particles = [];
-  function spawnParticles(x,y,color,count) {
-    count = count || 12;
-    for (let i=0; i<count; i++) {
-      const angle = Math.random()*Math.PI*2;
-      const spd = 1.5+Math.random()*4;
-      particles.push({x,y,vx:Math.cos(angle)*spd,vy:Math.sin(angle)*spd,life:35,color});
-    }
-  }
-  function drawParticles() {
-    for (const p of particles) {
-      ctx.save();
-      ctx.globalAlpha = p.life/35;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,3.5,0,Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-      p.x+=p.vx; p.y+=p.vy;
-      p.vx*=0.93; p.vy*=0.93;
-      p.life--;
-    }
-    particles = particles.filter(p=>p.life>0);
-  }
-
-  // ===== Update =====
-  function update() {
-    if (!gameRunning) return;
-    const cfg = levelConfig[level];
-
-    // ---- Continuous fish spawning ----
-    spawnTimer++;
-    if (spawnTimer >= SPAWN_INTERVAL[level]) {
-      spawnTimer = 0;
-      trySpawnFish();
-    }
-
-    // Underwater timer
-    const inWater = eagle.y > seaY();
-    if (inWater) {
-      underwaterFrames++;
-    } else {
-      underwaterFrames = 0;
-      forcedReturn = false;
-    }
-    if (underwaterFrames >= UNDERWATER_LIMIT) {
-      forcedReturn = true;
-    }
-
-    // Eagle movement
-    if (forcedReturn) {
-      eagle.vy -= 0.7;
-      eagle.vx *= 0.88;
-      if (underwaterFrames % 18 === 0) {
-        addPopup(eagle.x, eagle.y-22, '⬆️ 快飞回去！', '#ff4444');
-      }
-    } else {
-      eagle.vx += cfg.windX * 0.05;
-      eagle.vy += cfg.windY * 0.05;
-      if (keys['ArrowLeft']  || keys['a'] || keys['A']) eagle.vx -= eagle.speed*0.22;
-      if (keys['ArrowRight'] || keys['d'] || keys['D']) eagle.vx += eagle.speed*0.22;
-      if (keys['ArrowUp']    || keys['w'] || keys['W']) eagle.vy -= eagle.speed*0.22;
-      if (keys['ArrowDown']  || keys['s'] || keys['S']) eagle.vy += eagle.speed*0.22;
-    }
-
-    eagle.vx *= 0.84;
-    eagle.vy *= 0.84;
-
-    const maxSpd = forcedReturn ? eagle.speed*2.2 : eagle.speed;
-    const spd = Math.sqrt(eagle.vx**2 + eagle.vy**2);
-    if (spd > maxSpd) {
-      eagle.vx = (eagle.vx/spd)*maxSpd;
-      eagle.vy = (eagle.vy/spd)*maxSpd;
-    }
-
-    eagle.x += eagle.vx;
-    eagle.y += eagle.vy;
-    eagle.wingPhase += 0.19;
-    eagle.x = Math.max(26, Math.min(574, eagle.x));
-    eagle.y = Math.max(25, Math.min(660, eagle.y));
-    if (eagle.invincible > 0) eagle.invincible--;
-
-    // Clouds
-    for (const c of clouds) {
-      c.x += c.speed + cfg.windX*1.6;
-      if (c.x > 750) c.x = -120;
-    }
-    // Birds
-    for (const b of bgBirds) {
-      b.x += b.speed + cfg.windX*0.8;
-      b.phase += 0.13;
-      if (b.x > 660) b.x = -40;
-    }
-    // Rain
-    for (const r of rainDrops) {
-      r.x += cfg.windX*3.2;
-      r.y += r.speed;
-      if (r.y > 700) { r.y = -12; r.x = Math.random()*700; }
-      if (r.x > 650) r.x -= 650;
-    }
-    // Wave
-    waveOffset += cfg.waveSpeed;
-
-    // Fish movement
-    for (const f of fishes) {
-      if (!f.alive) continue;
-      f.phase += 0.055;
-
-      if (f.beingPushed) {
-        f.pushTimer--;
-        f.vy -= 0.4;
-        f.y += f.vy;
-        if (f.y <= seaY() + f.size + 5 || f.pushTimer <= 0) {
-          f.y = seaY() + f.size + 5;
-          f.vy = Math.abs(f.vy)*0.3 + 0.2;
-          f.beingPushed = false;
-          f.pushTimer = 0;
-        }
-        f.x += f.vx;
-        if (f.x<10)  { f.x=10;  f.vx=Math.abs(f.vx); }
-        if (f.x>590) { f.x=590; f.vx=-Math.abs(f.vx); }
-        continue;
-      }
-
-      f.x += f.vx;
-      f.y += f.vy + Math.sin(f.phase)*0.45;
-
-      if (f.y < seaY()+f.size+5) { f.y=seaY()+f.size+5; f.vy=Math.abs(f.vy)+0.15; }
-      if (f.y > 682) { f.y=682; f.vy=-Math.abs(f.vy)-0.1; }
-      if (f.x < 10)  { f.x=10;  f.vx=Math.abs(f.vx); }
-      if (f.x > 590) { f.x=590; f.vx=-Math.abs(f.vx); }
-    }
-
-    // Collision: eagle vs fish
-    for (const f of fishes) {
-      if (!f.alive) continue;
-      const dx = eagle.x - f.x;
-      const dy = eagle.y - f.y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      const hitR = eagle.w*0.38 + f.size*0.75;
-
-      if (dist < hitR) {
-        if (f.shark) {
-          if (eagle.invincible === 0) {
-            lives--;
-            eagle.invincible = 100;
-            spawnParticles(eagle.x, eagle.y, '#ff4444', 15);
-            addPopup(eagle.x, eagle.y-35, '💥 被鲨鱼咬了！', '#ff4444');
-            updateHUD();
-            if (lives <= 0) {
-              gameRunning = false;
-              setTimeout(()=> showOverlay('💀 游戏结束', `最终得分: ${displayScore(score)}分`, '再来一次'), 400);
-              return;
-            }
-          }
-        } else {
-          if (forcedReturn) {
-            if (!f.beingPushed) {
-              f.beingPushed = true;
-              f.pushTimer = 40;
-              f.vy = -Math.abs(f.vy) - 1;
-              spawnParticles(f.x, f.y, f.color, 6);
-              addPopup(f.x, f.y-20, '💦', '#88ccff');
-            }
-          } else {
-            // Caught! Award score (cumulative — never resets between levels)
-            f.alive = false;
-            const pts = fishPoints(f.size);
-            score += pts;
-            spawnParticles(f.x, f.y, f.color, 14);
-            addPopup(f.x, f.y-25, fishLabel(f.size), '#FFD700');
-            updateHUD();
-          }
-        }
-      }
-    }
-
-    // Clean up dead fish
-    fishes = fishes.filter(f => f.alive);
-
-    // ---- Level clear check ----
-    // Level 1 clears at 60 (6 pts), Level 2 at 120 (12 pts), Level 3 at 180 (18 pts)
-    if (!levelClearing && score >= levelConfig[level].targetScore) {
-      levelClearing = true;
-      gameRunning = false;
-      if (level < 3) {
-        // Show how many pts needed for next level threshold
-        const nextTarget = levelConfig[level+1].targetScore;
-        setTimeout(()=> showOverlay(
-          `🎉 第${level}关通过！`,
-          `当前得分: ${displayScore(score)}分<br>继续挑战第${level+1}关！（目标: ${displayScore(nextTarget)}分）`,
-          `第${level+1}关`
-        ), 350);
-      } else {
-        setTimeout(()=> showOverlay(
-          '🏆 你赢了！',
-          `全部三关通过！<br>最终得分: ${displayScore(score)}分`,
-          '再玩一次'
-        ), 350);
-      }
-    }
-  }
-
-  // ===== Draw =====
-  function draw() {
-    const cfg = levelConfig[level];
-    ctx.clearRect(0,0,600,700);
-
-    drawSky();
-    drawWind(cfg);
-    for (const c of clouds) drawCloud(c);
-    for (const b of bgBirds) drawBgBird(b);
-    drawRain(cfg);
-    drawSea(cfg);
-
-    if (eagle.y > seaY()) {
-      ctx.save();
-      ctx.globalAlpha = 0.18;
-      const glowGrad = ctx.createRadialGradient(eagle.x,eagle.y,5,eagle.x,eagle.y,50);
-      glowGrad.addColorStop(0,'#fff');
-      glowGrad.addColorStop(1,'rgba(0,150,255,0)');
-      ctx.fillStyle = glowGrad;
-      ctx.beginPath();
-      ctx.arc(eagle.x,eagle.y,50,0,Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    for (const f of fishes) drawFish(f);
-    drawEagle();
-    drawParticles();
-    drawPopups();
-    drawUnderwaterBar();
-
-    // Bottom progress bar — shows progress toward THIS level's target
-    const tgt = levelConfig[level].targetScore;
-    // For level 2/3, previous threshold is the "floor" so bar fills from prev threshold
-    const prevTgt = level > 1 ? levelConfig[level-1].targetScore : 0;
-    const levelRange = tgt - prevTgt;
-    const levelProgress = Math.max(0, score - prevTgt);
-    const prog = Math.min(levelProgress / levelRange, 1);
-
-    const barW = 220, barH = 14;
-    const bx = 300 - barW/2;
-    const by = 670;
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.beginPath(); ctx.roundRect(bx-2,by-2,barW+4,barH+4,8); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.beginPath(); ctx.roundRect(bx,by,barW,barH,6); ctx.fill();
-    const progGrad = ctx.createLinearGradient(bx,0,bx+barW,0);
-    progGrad.addColorStop(0,'#00e676');
-    progGrad.addColorStop(1,'#ffd600');
-    ctx.fillStyle = progGrad;
-    ctx.beginPath(); ctx.roundRect(bx,by,barW*prog,barH,6); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px Arial';
-    ctx.textAlign = 'center';
-    // Show current score / level target
-    ctx.fillText(`目标: ${displayScore(score)} / ${displayScore(tgt)}分`, 300, by+barH+14);
-    ctx.restore();
-
-    // Fish count indicator
-    const aliveFishCount = fishes.filter(f => !f.shark).length;
-    const aliveSharkCount = fishes.filter(f => f.shark).length;
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.38)';
-    ctx.beginPath(); ctx.roundRect(465,48,128,80,9); ctx.fill();
-    ctx.font = '11px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffd700'; ctx.fillText('👑 大鱼  +1.5分', 474,66);
-    ctx.fillStyle = '#aef';    ctx.fillText('●  中鱼  +1分',  474,82);
-    ctx.fillStyle = '#faa';    ctx.fillText('·  小鱼  +0.5分',474,98);
-    ctx.fillStyle = '#f66';    ctx.fillText('⚠️ 鲨鱼  危险!', 474,114);
-    ctx.fillStyle = '#cff';
-    ctx.fillText(`🐟×${aliveFishCount}  🦈×${aliveSharkCount}`, 474, 130);
-    ctx.restore();
-  }
-
-  // ===== Game Loop =====
-  function gameLoop() {
-    update();
-    draw();
-    animId = requestAnimationFrame(gameLoop);
-  }
-
-  // ===== Touch Controls =====
-  let touchStart = null;
-  canvas.addEventListener('touchstart', e=>{
-    e.preventDefault();
-    touchStart = {x:e.touches[0].clientX, y:e.touches[0].clientY};
-  },{passive:false});
-  canvas.addEventListener('touchmove', e=>{
-    e.preventDefault();
-    if (!touchStart) return;
-    const dx = e.touches[0].clientX - touchStart.x;
-    const dy = e.touches[0].clientY - touchStart.y;
-    if (!forcedReturn) {
-      eagle.vx += dx*0.045;
-      eagle.vy += dy*0.045;
-    }
-    touchStart = {x:e.touches[0].clientX, y:e.touches[0].clientY};
-  },{passive:false});
-  canvas.addEventListener('touchend',()=>{ touchStart=null; });
-
-  // ===== Button Handlers =====
-  document.getElementById('startBtn').addEventListener('click', function() {
-    startGame();
+  // ─────────────────────────────────────────
+  //  BUTTON HANDLERS
+  // ─────────────────────────────────────────
+  startBtn.addEventListener('click', function() {
+    level = 1;
+    startLevel();
   });
 
-  overlayBtn.addEventListener('click', function() {
-    overlayScreen.style.display = 'none';
-    const txt = overlayBtn.textContent;
-    if (txt === '再来一次' || txt === '再玩一次') {
-      startGame();
-    } else if (txt.includes('关')) {
-      level++;
-      initLevel(level);
-      gameRunning = true;
-      if (animId) cancelAnimationFrame(animId);
-      gameLoop();
-    }
+  nextBtn.addEventListener('click', function() {
+    rewardScreen.style.display = 'none';
+    level++;
+    // After level 3 cycle back but keep going
+    startLevel();
   });
 
-  menuBtn.addEventListener('click', function() {
-    goMenu();
+  retryBtn.addEventListener('click', function() {
+    failScreen.style.display = 'none';
+    // retry same level
+    startLevel();
   });
 
-  // BUTTON CHECKLIST: #startBtn ✓  #overlayBtn ✓  #menuBtn ✓
+  // ─────────────────────────────────────────
+  //  INITIAL IDLE DRAW (so canvas isn't blank if somehow seen)
+  // ─────────────────────────────────────────
+  resizeCanvas();
 
-});
+  // BUTTON CHECKLIST: #startBtn ✓  #nextBtn ✓  #retryBtn ✓
+
+}); // end DOMContentLoaded
 </script>
 </body>
 </html>
