@@ -88,6 +88,7 @@
     z-index: 1;
     top: 0; left: 0;
     display: none;
+    cursor: none; /* hide default cursor — we draw our own */
   }
 
   /* ── REWARD SCREEN ── */
@@ -191,7 +192,6 @@
     color: #fff;
     padding: 8px 18px;
     font-size: 0.95em;
-    display: none;
     justify-content: space-between;
     align-items: center;
     pointer-events: none;
@@ -243,6 +243,7 @@
       <span class="good">Business people, office workers, families, couples</span><br><br>
       <b>❌ Wrong targets (−1 pt):</b><br>
       <span class="bad">Kids 👦, Tourists 📸, Beggars 🧤</span><br><br>
+      🖱️ <b>Hold mouse button</b> to grab a person — drag &amp; release!<br><br>
       🎯 Reach <b>5 points</b> before time runs out to pass!<br>
       🏆 <b>Level 1</b> → 🍔 Burger reward<br>
       🏆 <b>Level 2</b> → 🍽️ Restaurant dinner<br>
@@ -297,20 +298,31 @@ document.addEventListener('DOMContentLoaded', function() {
   const timerLabel = document.getElementById('timerLabel');
 
   // ─────────────────────────────────────────
-  //  GAME STATE  (no localStorage!)
+  //  GAME STATE
   // ─────────────────────────────────────────
-  let level       = 1;
-  let score       = 0;
-  let timeLeft    = 30;
-  let timerID     = null;
-  let running     = false;
-  let people      = [];
-  let vehicles    = [];
-  let buildings   = [];
-  let clouds      = [];
-  let animFrame   = null;
+  let level      = 1;
+  let score      = 0;
+  let timeLeft   = 30;
+  let timerID    = null;
+  let running    = false;
+  let people     = [];
+  let vehicles   = [];
+  let buildings  = [];
+  let clouds     = [];
+  let animFrame  = null;
 
-  // resize canvas to window
+  // Mouse state
+  let mouseX = -999, mouseY = -999;
+  let mouseDown = false;
+  let grabbed = null;   // the person being dragged
+  let grabOffX = 0, grabOffY = 0;
+
+  // Walk animation tick
+  let walkTick = 0;
+
+  // ─────────────────────────────────────────
+  //  CANVAS RESIZE
+  // ─────────────────────────────────────────
   function resizeCanvas() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -321,14 +333,15 @@ document.addEventListener('DOMContentLoaded', function() {
   // ─────────────────────────────────────────
   //  PERSON TYPES
   // ─────────────────────────────────────────
+  // Each type carries body-color info for our stick-figure drawing
   const PERSON_TYPES = [
-    { type:'business', label:'Business Person', emoji:'👔', good:true,  color:'#2c3e50' },
-    { type:'worker',   label:'Office Worker',   emoji:'💼', good:true,  color:'#34495e' },
-    { type:'family',   label:'Family',          emoji:'👨‍👩‍👧', good:true,  color:'#27ae60' },
-    { type:'couple',   label:'Couple',          emoji:'👫', good:true,  color:'#8e44ad' },
-    { type:'kid',      label:'Kid',             emoji:'👦', good:false, color:'#e74c3c' },
-    { type:'tourist',  label:'Tourist',         emoji:'📸', good:false, color:'#e67e22' },
-    { type:'beggar',   label:'Beggar',          emoji:'🧤', good:false, color:'#7f8c8d' },
+    { type:'business', label:'Business Person', emoji:'💼', good:true,  shirtColor:'#2c3e50', pantColor:'#1a252f', skinColor:'#f0c27f', hatEmoji:'🎩' },
+    { type:'worker',   label:'Office Worker',   emoji:'📋', good:true,  shirtColor:'#2980b9', pantColor:'#1a5276', skinColor:'#f0c27f', hatEmoji:null   },
+    { type:'family',   label:'Family',          emoji:'👨‍👩‍👧', good:true,  shirtColor:'#27ae60', pantColor:'#1e8449', skinColor:'#f5cba7', hatEmoji:null   },
+    { type:'couple',   label:'Couple',          emoji:'💕', good:true,  shirtColor:'#8e44ad', pantColor:'#6c3483', skinColor:'#fad7a0', hatEmoji:null   },
+    { type:'kid',      label:'Kid',             emoji:'🎒', good:false, shirtColor:'#e74c3c', pantColor:'#a93226', skinColor:'#f9e4b7', hatEmoji:'🧢'  },
+    { type:'tourist',  label:'Tourist',         emoji:'📸', good:false, shirtColor:'#e67e22', pantColor:'#ca6f1e', skinColor:'#fdebd0', hatEmoji:'👒'  },
+    { type:'beggar',   label:'Beggar',          emoji:'🧤', good:false, shirtColor:'#7f8c8d', pantColor:'#515a5a', skinColor:'#d5b59e', hatEmoji:null   },
   ];
 
   // ─────────────────────────────────────────
@@ -350,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
     buildings = [];
     clouds    = [];
 
-    const groundY = canvas.height * 0.62;
+    const groundY  = canvas.height * 0.62;
     const bldCount = 7;
     const spacing  = canvas.width / (bldCount + 1);
 
@@ -365,35 +378,42 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     }
 
-    // clouds
     for (let i = 0; i < 5; i++) {
       clouds.push({
-        x: Math.random() * canvas.width,
-        y: 40 + Math.random() * 80,
-        r: 35 + Math.random() * 30,
+        x:     Math.random() * canvas.width,
+        y:     40 + Math.random() * 80,
+        r:     35 + Math.random() * 30,
         speed: 0.3 + Math.random() * 0.3
       });
     }
   }
 
   // ─────────────────────────────────────────
-  //  SPAWN PEOPLE & VEHICLES
+  //  GROUND Y helper
   // ─────────────────────────────────────────
   const groundY = () => canvas.height * 0.62;
 
+  // ─────────────────────────────────────────
+  //  SPAWN PEOPLE  — now with walk-phase
+  // ─────────────────────────────────────────
   function spawnPerson() {
     if (!running) return;
-    const tdata  = PERSON_TYPES[Math.floor(Math.random() * PERSON_TYPES.length)];
+    const tdata    = PERSON_TYPES[Math.floor(Math.random() * PERSON_TYPES.length)];
     const fromLeft = Math.random() < 0.5;
-    const speed    = 1.2 + Math.random() * 1.4;
+    // Scale person size based on canvas height so it looks right on all screens
+    const personH  = Math.max(48, canvas.height * 0.085); // total height of figure
+    const speed    = 0.6 + Math.random() * 0.8;
+
     people.push({
-      x:    fromLeft ? -30 : canvas.width + 30,
-      y:    groundY() + 2,
-      vx:   fromLeft ? speed : -speed,
-      size: 28,
+      x:        fromLeft ? -40 : canvas.width + 40,
+      baseY:    groundY(),          // feet stand on this line
+      vx:       fromLeft ? speed : -speed,
+      personH:  personH,            // total figure height
+      walkPhase: Math.random() * Math.PI * 2, // so they don't all step together
       ...tdata,
-      clicked: false,
-      flash:   0,
+      grabbed:  false,
+      flash:    0,
+      flashGood: true,
     });
   }
 
@@ -414,16 +434,14 @@ document.addEventListener('DOMContentLoaded', function() {
   //  DRAW HELPERS
   // ─────────────────────────────────────────
   function drawBackground() {
-    // sky gradient
     const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.65);
-    skyGrad.addColorStop(0,   '#87CEEB');
-    skyGrad.addColorStop(1,   '#d4f1f9');
+    skyGrad.addColorStop(0, '#87CEEB');
+    skyGrad.addColorStop(1, '#d4f1f9');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, canvas.width, canvas.height * 0.65);
 
-    // ground
     const gGrad = ctx.createLinearGradient(0, canvas.height * 0.65, 0, canvas.height);
-    gGrad.addColorStop(0, '#6dbb63');
+    gGrad.addColorStop(0,    '#6dbb63');
     gGrad.addColorStop(0.18, '#5a8f50');
     gGrad.addColorStop(0.19, '#aaa');
     gGrad.addColorStop(0.55, '#bbb');
@@ -432,39 +450,36 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.fillStyle = gGrad;
     ctx.fillRect(0, canvas.height * 0.65, canvas.width, canvas.height * 0.35);
 
-    // road markings
-    const roadY = canvas.height * 0.685;
+    // road dashes
     ctx.strokeStyle = '#FFE566';
     ctx.lineWidth = 3;
     ctx.setLineDash([28, 18]);
     ctx.beginPath();
-    ctx.moveTo(0, roadY + 18);
-    ctx.lineTo(canvas.width, roadY + 18);
+    ctx.moveTo(0, canvas.height * 0.685 + 18);
+    ctx.lineTo(canvas.width, canvas.height * 0.685 + 18);
     ctx.stroke();
     ctx.setLineDash([]);
   }
 
   function drawClouds() {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#fff';
     clouds.forEach(c => {
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(c.x,       c.y,      c.r,       0, Math.PI*2);
-      ctx.arc(c.x+c.r*0.7, c.y-c.r*0.3, c.r*0.7, 0, Math.PI*2);
-      ctx.arc(c.x-c.r*0.6, c.y-c.r*0.2, c.r*0.6, 0, Math.PI*2);
+      ctx.arc(c.x,           c.y,          c.r,       0, Math.PI*2);
+      ctx.arc(c.x+c.r*0.7,  c.y-c.r*0.3,  c.r*0.7,   0, Math.PI*2);
+      ctx.arc(c.x-c.r*0.6,  c.y-c.r*0.2,  c.r*0.6,   0, Math.PI*2);
       ctx.fill();
-      ctx.globalAlpha = 1;
-      ctx.restore();
     });
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   function drawBuilding(b) {
-    // body
     ctx.fillStyle = b.color;
     ctx.fillRect(b.x - b.w/2, b.y - b.h, b.w, b.h);
 
-    // roof (triangle)
     ctx.fillStyle = b.roofColor;
     ctx.beginPath();
     ctx.moveTo(b.x - b.w/2 - 6, b.y - b.h);
@@ -473,7 +488,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.closePath();
     ctx.fill();
 
-    // windows
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     for (let row = 0; row < 2; row++) {
       for (let col = 0; col < 2; col++) {
@@ -485,36 +499,205 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // door
     ctx.fillStyle = '#5d4037';
     ctx.fillRect(b.x - 10, b.y - 22, 20, 22);
 
-    // emoji label
     ctx.font = '18px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(b.emoji, b.x, b.y - b.h - 32);
 
-    // name
     ctx.font = 'bold 10px Arial';
     ctx.fillStyle = '#333';
     ctx.fillText(b.name, b.x, b.y + 11);
   }
 
+  // ─────────────────────────────────────────
+  //  DRAW STICK PERSON  (the new human shape)
+  // ─────────────────────────────────────────
+  /*
+    Proportions (all relative to personH = total height):
+      head radius = H * 0.13
+      neck-top (shoulder Y) = -H + headR*2 + H*0.04
+      torso bottom = shoulder + H*0.38
+      legs bottom = baseY (= 0 in local coords, feet on ground)
+      arms swing with walk phase
+      legs swing with walk phase
+  */
   function drawPerson(p) {
+    const H    = p.personH;
+    const feetY = p.grabbed ? p.baseY : p.baseY;  // feet Y in world space
+    const cx   = p.x;
+
     ctx.save();
-    // flash green/red on click
+    ctx.translate(cx, feetY);   // origin = feet on ground
+
+    // flash tint
     if (p.flash > 0) {
-      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(p.flash * 0.8);
+      ctx.globalAlpha = 0.55 + 0.45 * Math.sin(p.flash * 0.9);
     }
-    ctx.font = p.size + 'px Arial';
-    ctx.textAlign = 'center';
-    // shadow circle
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+
+    // ── proportions ──
+    const headR    = H * 0.13;
+    const shoulderY = -(H - headR * 2 - H * 0.04);  // negative = up
+    const hipY      = shoulderY + H * 0.38;
+    const torsoMidX = 0;
+    const legLen    = Math.abs(hipY);   // from hip to feet (y=0)
+    const armLen    = H * 0.26;
+
+    // walk animation — swing legs/arms
+    const phase    = p.walkPhase + walkTick * 0.05 * (p.grabbed ? 0 : 1);
+    const legSwing = Math.sin(phase) * 14;      // degrees in canvas units
+    const armSwing = -Math.sin(phase) * 10;
+
+    // Direction flip so person faces the way they walk
+    const facingRight = p.vx >= 0;
+    if (!facingRight) ctx.scale(-1, 1);
+
+    // ── shadow ──
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.beginPath();
-    ctx.ellipse(p.x, p.y + 4, p.size * 0.45, 7, 0, 0, Math.PI*2);
+    ctx.ellipse(0, 2, H * 0.18, 5, 0, 0, Math.PI*2);
     ctx.fill();
-    // emoji
-    ctx.fillText(p.emoji, p.x, p.y);
+
+    // ── legs ──
+    ctx.lineWidth = Math.max(3, H * 0.07);
+    ctx.lineCap   = 'round';
+    ctx.strokeStyle = p.pantColor;
+
+    // left leg
+    ctx.beginPath();
+    ctx.moveTo(torsoMidX, hipY);
+    ctx.lineTo(torsoMidX - legSwing * 0.5, hipY + legLen * 0.5);
+    ctx.lineTo(torsoMidX - legSwing,        0);
+    ctx.stroke();
+
+    // right leg
+    ctx.beginPath();
+    ctx.moveTo(torsoMidX, hipY);
+    ctx.lineTo(torsoMidX + legSwing * 0.5, hipY + legLen * 0.5);
+    ctx.lineTo(torsoMidX + legSwing,        0);
+    ctx.stroke();
+
+    // shoes
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.ellipse(torsoMidX - legSwing + 3, 0, 6, 4, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(torsoMidX + legSwing + 3, 0, 6, 4, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // ── torso ──
+    ctx.fillStyle = p.shirtColor;
+    // draw a simple rounded rect for shirt
+    const torsoW = H * 0.22;
+    const torsoH = Math.abs(hipY - shoulderY);
+    ctx.beginPath();
+    ctx.roundRect(torsoMidX - torsoW/2, shoulderY, torsoW, torsoH, 4);
+    ctx.fill();
+
+    // ── arms ──
+    ctx.lineWidth = Math.max(2.5, H * 0.055);
+    ctx.strokeStyle = p.shirtColor;
+
+    // left arm
+    ctx.beginPath();
+    ctx.moveTo(torsoMidX - torsoW/2, shoulderY + 4);
+    ctx.lineTo(torsoMidX - torsoW/2 - armSwing,       shoulderY + armLen * 0.5);
+    ctx.lineTo(torsoMidX - torsoW/2 - armSwing * 0.6, shoulderY + armLen);
+    ctx.stroke();
+
+    // right arm
+    ctx.beginPath();
+    ctx.moveTo(torsoMidX + torsoW/2, shoulderY + 4);
+    ctx.lineTo(torsoMidX + torsoW/2 + armSwing,       shoulderY + armLen * 0.5);
+    ctx.lineTo(torsoMidX + torsoW/2 + armSwing * 0.6, shoulderY + armLen);
+    ctx.stroke();
+
+    // hands (small circles)
+    ctx.fillStyle = p.skinColor;
+    ctx.beginPath();
+    ctx.arc(torsoMidX - torsoW/2 - armSwing * 0.6, shoulderY + armLen, 4, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(torsoMidX + torsoW/2 + armSwing * 0.6, shoulderY + armLen, 4, 0, Math.PI*2);
+    ctx.fill();
+
+    // ── neck ──
+    ctx.strokeStyle = p.skinColor;
+    ctx.lineWidth   = H * 0.06;
+    ctx.beginPath();
+    ctx.moveTo(0, shoulderY);
+    ctx.lineTo(0, shoulderY - headR * 0.4);
+    ctx.stroke();
+
+    // ── head ──
+    ctx.fillStyle = p.skinColor;
+    ctx.beginPath();
+    ctx.arc(0, shoulderY - headR, headR, 0, Math.PI*2);
+    ctx.fill();
+    // simple face
+    ctx.fillStyle = '#333';
+    // eyes
+    ctx.beginPath();
+    ctx.arc(-headR*0.3, shoulderY - headR - headR*0.1, headR*0.1, 0, Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc( headR*0.3, shoulderY - headR - headR*0.1, headR*0.1, 0, Math.PI*2);
+    ctx.fill();
+    // mouth
+    ctx.beginPath();
+    ctx.arc(0, shoulderY - headR + headR*0.2, headR*0.25, 0, Math.PI);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth   = 1.5;
+    ctx.stroke();
+
+    // ── hat ──
+    if (p.hatEmoji) {
+      ctx.font = (headR * 1.6) + 'px Arial';
+      ctx.textAlign  = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(p.hatEmoji, 0, shoulderY - headR * 2 - 2);
+    }
+
+    // ── type emoji badge (small, above head) ──
+    ctx.font = (headR * 1.2) + 'px Arial';
+    ctx.textAlign  = 'center';
+    ctx.textBaseline = 'alphabetic';
+    // put it to the side so it doesn't clash with hat
+    ctx.fillText(p.emoji, headR * 1.3, shoulderY - headR * (p.hatEmoji ? 2.8 : 1.8));
+
+    // ── "GRAB" highlight ring when mouse hovers ──
+    if (!p.grabbed) {
+      const localMX = facingRight ? mouseX - cx : -(mouseX - cx);
+      const localMY = mouseY - feetY;
+      const hitR    = H * 0.55;
+      // check if hovering
+      const dist = Math.sqrt(localMX*localMX + (localMY - shoulderY + headR)*( localMY - shoulderY + headR));
+      if (dist < hitR && !grabbed) {
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth   = 3;
+        ctx.setLineDash([5,4]);
+        ctx.beginPath();
+        ctx.ellipse(0, shoulderY - headR + H*0.2, H*0.25, H*0.55, 0, 0, Math.PI*2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // grabbed: draw a bright ring
+    if (p.grabbed) {
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = '#00FFFF';
+      ctx.lineWidth   = 3;
+      ctx.setLineDash([6, 3]);
+      ctx.beginPath();
+      ctx.ellipse(0, shoulderY - headR + H*0.2, H*0.27, H*0.57, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     ctx.restore();
   }
 
@@ -523,8 +706,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.font = v.size + 'px Arial';
     ctx.textAlign = 'center';
     if (v.vx < 0) {
-      // flip
-      ctx.scale(-1,1);
+      ctx.scale(-1, 1);
       ctx.fillText(v.emoji, -v.x, v.y);
     } else {
       ctx.fillText(v.emoji, v.x, v.y);
@@ -533,46 +715,147 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ─────────────────────────────────────────
-  //  CLICK DETECTION
+  //  CUSTOM CURSOR  (hand/grab icon on canvas)
   // ─────────────────────────────────────────
-  canvas.addEventListener('click', function(e) {
+  function drawCursor() {
+    if (mouseX < 0) return;
+    ctx.save();
+    ctx.font = '22px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    // show a grabbing hand emoji
+    ctx.fillText(grabbed ? '✊' : '🖐️', mouseX, mouseY - 22);
+    ctx.restore();
+  }
+
+  // ─────────────────────────────────────────
+  //  GRAB DETECTION  — find person under mouse
+  // ─────────────────────────────────────────
+  function personHitTest(p, mx, my) {
+    const H = p.personH;
+    const shoulderY = -(H - H*0.13*2 - H*0.04);
+    const headTopY  = p.baseY + shoulderY - H*0.13*2;
+    const feetY     = p.baseY;
+    // bounding box check (generous)
+    const withinX = Math.abs(mx - p.x) < H * 0.32;
+    const withinY = my > headTopY && my < feetY + 5;
+    return withinX && withinY;
+  }
+
+  // ─────────────────────────────────────────
+  //  MOUSE EVENTS
+  // ─────────────────────────────────────────
+  canvas.addEventListener('mousemove', function(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+
+    if (grabbed) {
+      // drag the person — keep their feet offset
+      grabbed.x     = mouseX + grabOffX;
+      grabbed.baseY = mouseY + grabOffY;
+    }
+  });
+
+  canvas.addEventListener('mousedown', function(e) {
     if (!running) return;
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    mouseDown = true;
 
-    let hit = false;
+    // Try to grab a person
     for (let i = people.length - 1; i >= 0; i--) {
       const p = people[i];
-      const dx = mx - p.x;
-      const dy = my - p.y + p.size * 0.3;
-      if (Math.sqrt(dx*dx + dy*dy) < p.size * 0.65) {
-        // clicked!
-        const pts = p.good ? 1 : -1;
-        score = Math.max(-99, score + pts);
-        updateHUD();
-        showTooltip(p, e.clientX, e.clientY, pts);
-        p.flash = 15;
-        people.splice(i, 1);
-        hit = true;
-
-        // check win
-        if (score >= 5) {
-          endLevel(true);
-        }
+      if (!p.grabbed && personHitTest(p, mouseX, mouseY)) {
+        grabbed        = p;
+        p.grabbed      = true;
+        grabOffX       = p.x     - mouseX;
+        grabOffY       = p.baseY - mouseY;
+        // stop walking while grabbed
+        p._savedVX     = p.vx;
+        p.vx           = 0;
         break;
       }
     }
   });
 
-  // touch support
+  canvas.addEventListener('mouseup', function(e) {
+    if (!running || !grabbed) return;
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+
+    // Score the grab — treat "release" as the "click"
+    const p   = grabbed;
+    const pts = p.good ? 1 : -1;
+    score = Math.max(-99, score + pts);
+    updateHUD();
+    showTooltip(p, e.clientX, e.clientY, pts);
+    p.flash    = 18;
+    p.flashGood = p.good;
+
+    // remove from list
+    const idx = people.indexOf(p);
+    if (idx !== -1) people.splice(idx, 1);
+
+    grabbed    = null;
+    mouseDown  = false;
+
+    if (score >= 5) endLevel(true);
+  });
+
+  // ─────────────────────────────────────────
+  //  TOUCH SUPPORT  (drag on mobile)
+  // ─────────────────────────────────────────
   canvas.addEventListener('touchstart', function(e) {
     if (!running) return;
     e.preventDefault();
-    const t = e.touches[0];
-    canvas.dispatchEvent(new MouseEvent('click', {
-      clientX: t.clientX, clientY: t.clientY
-    }));
+    const rect = canvas.getBoundingClientRect();
+    const t    = e.touches[0];
+    mouseX = t.clientX - rect.left;
+    mouseY = t.clientY - rect.top;
+
+    for (let i = people.length - 1; i >= 0; i--) {
+      const p = people[i];
+      if (!p.grabbed && personHitTest(p, mouseX, mouseY)) {
+        grabbed    = p;
+        p.grabbed  = true;
+        grabOffX   = p.x     - mouseX;
+        grabOffY   = p.baseY - mouseY;
+        p._savedVX = p.vx;
+        p.vx       = 0;
+        break;
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', function(e) {
+    if (!running || !grabbed) return;
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const t    = e.touches[0];
+    mouseX = t.clientX - rect.left;
+    mouseY = t.clientY - rect.top;
+    grabbed.x     = mouseX + grabOffX;
+    grabbed.baseY = mouseY + grabOffY;
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', function(e) {
+    if (!running || !grabbed) return;
+    e.preventDefault();
+    const p   = grabbed;
+    const pts = p.good ? 1 : -1;
+    score = Math.max(-99, score + pts);
+    updateHUD();
+    // approximate position for tooltip
+    showTooltip(p, p.x, p.baseY - p.personH, pts);
+    p.flash     = 18;
+    p.flashGood = p.good;
+    const idx = people.indexOf(p);
+    if (idx !== -1) people.splice(idx, 1);
+    grabbed = null;
+    if (score >= 5) endLevel(true);
   }, { passive: false });
 
   // ─────────────────────────────────────────
@@ -590,7 +873,7 @@ document.addEventListener('DOMContentLoaded', function() {
       tooltip.textContent = '-1 ❌ ' + p.label;
     }
     clearTimeout(tooltip._timer);
-    tooltip._timer = setTimeout(() => { tooltip.style.display = 'none'; }, 1200);
+    tooltip._timer = setTimeout(() => { tooltip.style.display = 'none'; }, 1300);
   }
 
   // ─────────────────────────────────────────
@@ -628,9 +911,8 @@ document.addEventListener('DOMContentLoaded', function() {
   let spawnCarID    = null;
 
   function startSpawns() {
-    spawnPeopleID = setInterval(spawnPerson, 1400);
+    spawnPeopleID = setInterval(spawnPerson,  1600);
     spawnCarID    = setInterval(spawnVehicle, 2800);
-    // spawn a few right away
     spawnPerson(); spawnPerson(); spawnVehicle();
   }
 
@@ -645,47 +927,49 @@ document.addEventListener('DOMContentLoaded', function() {
   function gameLoop() {
     if (!running) return;
 
+    walkTick++;   // advances leg/arm animation
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // background & buildings
     drawBackground();
     drawClouds();
     buildings.forEach(drawBuilding);
 
-    // move clouds
+    // animate clouds
     clouds.forEach(c => {
       c.x += c.speed;
       if (c.x - c.r > canvas.width) c.x = -c.r * 2;
     });
 
-    // move & draw vehicles (below people)
+    // vehicles
     vehicles = vehicles.filter(v => v.x > -100 && v.x < canvas.width + 100);
-    vehicles.forEach(v => {
-      v.x += v.vx;
-      drawVehicle(v);
-    });
+    vehicles.forEach(v => { v.x += v.vx; drawVehicle(v); });
 
-    // move & draw people
-    people = people.filter(p => p.x > -60 && p.x < canvas.width + 60);
+    // people
+    people = people.filter(p => p.x > -80 && p.x < canvas.width + 80);
     people.forEach(p => {
-      p.x += p.vx;
+      // only walk if not grabbed
+      if (!p.grabbed) p.x += p.vx;
       if (p.flash > 0) p.flash--;
       drawPerson(p);
     });
+
+    drawCursor();
 
     animFrame = requestAnimationFrame(gameLoop);
   }
 
   // ─────────────────────────────────────────
-  //  START GAME / LEVEL
+  //  START LEVEL
   // ─────────────────────────────────────────
   function startLevel() {
-    score   = 0;
-    running = true;
-    people  = [];
+    score    = 0;
+    running  = true;
+    people   = [];
     vehicles = [];
+    grabbed  = null;
+    walkTick = 0;
 
-    // show canvas & hud
     canvas.style.display = 'block';
     hud.style.display    = 'flex';
     startScreen.style.display  = 'none';
@@ -707,21 +991,19 @@ document.addEventListener('DOMContentLoaded', function() {
     clearInterval(timerID);
     stopSpawns();
     cancelAnimationFrame(animFrame);
+    grabbed = null;
 
-    if (won) {
-      showReward();
-    } else {
-      showFail();
-    }
+    if (won) showReward();
+    else     showFail();
   }
 
   // ─────────────────────────────────────────
-  //  REWARD SCREEN CONTENT
+  //  REWARD / FAIL SCREENS
   // ─────────────────────────────────────────
   const REWARDS = [
-    { emoji:'🍔', title:'Burger Time!',        desc:'You closed great deals!\nYour reward: a juicy LA burger. 🍔🎉' },
-    { emoji:'🍽️',  title:'Restaurant Dinner!',  desc:'Outstanding work, agent!\nEnjoy a fancy restaurant dinner. 🍽️✨' },
-    { emoji:'🏠',  title:'You Got the House!',  desc:'LEGENDARY agent! You earned\na beautiful LA house! 🏠🌴' },
+    { emoji:'🍔', title:'Burger Time!',       desc:'You closed great deals!\nYour reward: a juicy LA burger. 🍔🎉' },
+    { emoji:'🍽️',  title:'Restaurant Dinner!', desc:'Outstanding work, agent!\nEnjoy a fancy restaurant dinner. 🍽️✨' },
+    { emoji:'🏠',  title:'You Got the House!', desc:'LEGENDARY agent! You earned\na beautiful LA house! 🏠🌴' },
   ];
 
   function showReward() {
@@ -754,19 +1036,15 @@ document.addEventListener('DOMContentLoaded', function() {
   nextBtn.addEventListener('click', function() {
     rewardScreen.style.display = 'none';
     level++;
-    // After level 3 cycle back but keep going
     startLevel();
   });
 
   retryBtn.addEventListener('click', function() {
     failScreen.style.display = 'none';
-    // retry same level
     startLevel();
   });
 
-  // ─────────────────────────────────────────
-  //  INITIAL IDLE DRAW (so canvas isn't blank if somehow seen)
-  // ─────────────────────────────────────────
+  // initial resize
   resizeCanvas();
 
   // BUTTON CHECKLIST: #startBtn ✓  #nextBtn ✓  #retryBtn ✓
