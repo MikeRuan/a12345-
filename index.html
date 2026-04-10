@@ -132,7 +132,7 @@
       🦈 碰到鲨鱼失去一条命<br>
       ⏱️ 在水中超过1.5秒会被推回水面！<br>
       ⚠️ 返回途中碰到的鱼不得分，鱼会被推到水面！<br>
-      🌊 共三关，达到6分过关，风浪雨越来越大！
+      🌊 共三关：第1关6分 → 第2关12分 → 第3关18分！
     </p>
     <button class="menuBtn" id="startBtn">开始游戏</button>
   </div>
@@ -163,12 +163,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const hudLives     = document.getElementById('hudLives');
 
   // ===== Game State =====
-  let score = 0;        // internal ×10 (6 pts = 60)
+  let score = 0;        // internal ×10 (e.g. 6 pts = 60)
   let lives = 3;
   let level = 1;
   let gameRunning = false;
   let animId = null;
-  let levelClearing = false;  // prevent double-trigger of level clear
+  let levelClearing = false;
 
   // ===== Underwater mechanic =====
   let underwaterFrames = 0;
@@ -176,31 +176,34 @@ document.addEventListener('DOMContentLoaded', function() {
   let forcedReturn = false;
 
   // ===== Fish spawning =====
-  // Each level has a max live fish count and a spawn interval (frames)
-  const FISH_MAX = { 1: 6, 2: 8, 3: 10 };       // max normal fish on screen at once
-  const SHARK_MAX = { 1: 1, 2: 2, 3: 3 };        // max sharks on screen at once
-  const SPAWN_INTERVAL = { 1: 180, 2: 120, 3: 80 }; // frames between spawn attempts
-  let spawnTimer = 0;  // counts frames since last spawn attempt
+  const FISH_MAX = { 1: 6, 2: 8, 3: 10 };
+  const SHARK_MAX = { 1: 1, 2: 2, 3: 3 };
+  const SPAWN_INTERVAL = { 1: 180, 2: 120, 3: 80 };
+  let spawnTimer = 0;
 
   // ===== Level config =====
-  // targetScore = 6 points × 10 = 60
+  // Score thresholds (×10 internally):
+  //   Level 1: reach  6 pts (60)  → clear
+  //   Level 2: reach 12 pts (120) → clear
+  //   Level 3: reach 18 pts (180) → clear
+  // Score is CUMULATIVE across levels — it never resets between levels.
   const levelConfig = {
-    1: { windX:0,   windY:0,    waveAmp:10, waveSpeed:0.02,  rainCount:0,   fishCount:6, sharkCount:1, fishSpeed:1.5, targetScore:60 },
-    2: { windX:0.6, windY:0.15, waveAmp:30, waveSpeed:0.06,  rainCount:90,  fishCount:7, sharkCount:2, fishSpeed:1.5, targetScore:60 },
-    3: { windX:1.2, windY:0.3,  waveAmp:50, waveSpeed:0.095, rainCount:160, fishCount:8, sharkCount:3, fishSpeed:1.5, targetScore:60 }
+    1: { windX:0,   windY:0,    waveAmp:10, waveSpeed:0.02,  rainCount:0,   fishCount:6, sharkCount:1, fishSpeed:1.5, targetScore:60  },
+    2: { windX:0.6, windY:0.15, waveAmp:30, waveSpeed:0.06,  rainCount:90,  fishCount:7, sharkCount:2, fishSpeed:1.5, targetScore:120 },
+    3: { windX:1.2, windY:0.3,  waveAmp:50, waveSpeed:0.095, rainCount:160, fishCount:8, sharkCount:3, fishSpeed:1.5, targetScore:180 }
   };
 
   // ===== Fish type table =====
   const FISH_TYPES = [
-    { color:'#ff6600', size:27 },  // big
-    { color:'#ffd700', size:25 },  // big
-    { color:'#ff88aa', size:24 },  // big
-    { color:'#00aaff', size:19 },  // mid
-    { color:'#00cc44', size:17 },  // mid
-    { color:'#aa44ff', size:16 },  // mid
-    { color:'#ff44cc', size:13 },  // small
-    { color:'#ff2222', size:11 },  // small
-    { color:'#44ffcc', size:10 },  // small
+    { color:'#ff6600', size:27 },
+    { color:'#ffd700', size:25 },
+    { color:'#ff88aa', size:24 },
+    { color:'#00aaff', size:19 },
+    { color:'#00cc44', size:17 },
+    { color:'#aa44ff', size:16 },
+    { color:'#ff44cc', size:13 },
+    { color:'#ff2222', size:11 },
+    { color:'#44ffcc', size:10 },
   ];
 
   function fishPoints(size) {
@@ -297,7 +300,6 @@ document.addEventListener('DOMContentLoaded', function() {
   function createFish(cfg) {
     const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
     const dir = Math.random() < 0.5 ? 1 : -1;
-    // Spawn from left or right edge, or random position deep in water
     const spawnEdge = Math.random() < 0.4;
     const sx = spawnEdge ? (dir === 1 ? -ft.size : 600 + ft.size) : Math.random() * 560 + 20;
     return {
@@ -312,7 +314,6 @@ document.addEventListener('DOMContentLoaded', function() {
       alive: true,
       beingPushed: false,
       pushTimer: 0,
-      // Small fade-in so fish "swim in" smoothly
       fadeIn: 30,
     };
   }
@@ -320,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // ===== Create a single new shark =====
   function createShark(cfg) {
     const dir = Math.random() < 0.5 ? 1 : -1;
-    const sx = dir === 1 ? -35 : 635; // always enters from the side
+    const sx = dir === 1 ? -35 : 635;
     return {
       x: sx,
       y: 460 + Math.random() * 180,
@@ -337,10 +338,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
-  // ===== Initial fish spawn (fills the sea at level start) =====
+  // ===== Initial fish spawn =====
   function spawnFish(cfg) {
     fishes = [];
-    // Spawn initial fish without edge-entry (random positions)
     for (let i = 0; i < cfg.fishCount; i++) {
       const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
       const dir = Math.random() < 0.5 ? 1 : -1;
@@ -383,29 +383,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const cfg = levelConfig[level];
     const maxFish  = FISH_MAX[level];
     const maxShark = SHARK_MAX[level];
-
-    // Count currently alive fish and sharks
     const aliveFish  = fishes.filter(f => f.alive && !f.shark).length;
     const aliveShark = fishes.filter(f => f.alive && f.shark).length;
-
-    // Remove dead fish that have been gone for a while (keep array tidy)
-    // We only keep fish that are alive OR were just collected (handled by alive flag already)
     fishes = fishes.filter(f => f.alive);
-
-    // Spawn new normal fish if below max
-    if (aliveFish < maxFish) {
-      fishes.push(createFish(cfg));
-    }
-
-    // Spawn new shark if below max
-    if (aliveShark < maxShark) {
-      fishes.push(createShark(cfg));
-    }
+    if (aliveFish < maxFish)   fishes.push(createFish(cfg));
+    if (aliveShark < maxShark) fishes.push(createShark(cfg));
   }
 
   function seaY() { return 380; }
 
   // ===== Init level =====
+  // Note: score is NOT reset here — it carries over between levels!
   function initLevel(lv) {
     level = lv;
     levelClearing = false;
@@ -434,6 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ===== Start game =====
   function startGame() {
+    // Full reset including score on a brand-new game
     score = 0; lives = 3; level = 1;
     startScreen.style.display = 'none';
     overlayScreen.style.display = 'none';
@@ -587,7 +576,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!f.alive) return;
     ctx.save();
 
-    // Fade-in effect for newly spawned fish
     if (f.fadeIn > 0) {
       ctx.globalAlpha = 1 - (f.fadeIn / 30);
       f.fadeIn--;
@@ -1021,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', function() {
               addPopup(f.x, f.y-20, '💦', '#88ccff');
             }
           } else {
-            // Caught! Mark dead, award score, then a new fish will spawn shortly
+            // Caught! Award score (cumulative — never resets between levels)
             f.alive = false;
             const pts = fishPoints(f.size);
             score += pts;
@@ -1033,17 +1021,20 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
 
-    // Clean up dead fish so the array stays tidy
+    // Clean up dead fish
     fishes = fishes.filter(f => f.alive);
 
-    // Level clear check
+    // ---- Level clear check ----
+    // Level 1 clears at 60 (6 pts), Level 2 at 120 (12 pts), Level 3 at 180 (18 pts)
     if (!levelClearing && score >= levelConfig[level].targetScore) {
       levelClearing = true;
       gameRunning = false;
       if (level < 3) {
+        // Show how many pts needed for next level threshold
+        const nextTarget = levelConfig[level+1].targetScore;
         setTimeout(()=> showOverlay(
           `🎉 第${level}关通过！`,
-          `得分: ${displayScore(score)}分 ≥ 6分<br>继续挑战第${level+1}关！`,
+          `当前得分: ${displayScore(score)}分<br>继续挑战第${level+1}关！（目标: ${displayScore(nextTarget)}分）`,
           `第${level+1}关`
         ), 350);
       } else {
@@ -1087,9 +1078,14 @@ document.addEventListener('DOMContentLoaded', function() {
     drawPopups();
     drawUnderwaterBar();
 
-    // Bottom progress bar
+    // Bottom progress bar — shows progress toward THIS level's target
     const tgt = levelConfig[level].targetScore;
-    const prog = Math.min(score/tgt, 1);
+    // For level 2/3, previous threshold is the "floor" so bar fills from prev threshold
+    const prevTgt = level > 1 ? levelConfig[level-1].targetScore : 0;
+    const levelRange = tgt - prevTgt;
+    const levelProgress = Math.max(0, score - prevTgt);
+    const prog = Math.min(levelProgress / levelRange, 1);
+
     const barW = 220, barH = 14;
     const bx = 300 - barW/2;
     const by = 670;
@@ -1106,10 +1102,11 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`目标: ${displayScore(score)} / 6分`, 300, by+barH+14);
+    // Show current score / level target
+    ctx.fillText(`目标: ${displayScore(score)} / ${displayScore(tgt)}分`, 300, by+barH+14);
     ctx.restore();
 
-    // Fish count indicator (shows how many fish are currently in the sea)
+    // Fish count indicator
     const aliveFishCount = fishes.filter(f => !f.shark).length;
     const aliveSharkCount = fishes.filter(f => f.shark).length;
     ctx.save();
@@ -1121,7 +1118,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.fillStyle = '#aef';    ctx.fillText('●  中鱼  +1分',  474,82);
     ctx.fillStyle = '#faa';    ctx.fillText('·  小鱼  +0.5分',474,98);
     ctx.fillStyle = '#f66';    ctx.fillText('⚠️ 鲨鱼  危险!', 474,114);
-    // Live fish counter
     ctx.fillStyle = '#cff';
     ctx.fillText(`🐟×${aliveFishCount}  🦈×${aliveSharkCount}`, 474, 130);
     ctx.restore();
