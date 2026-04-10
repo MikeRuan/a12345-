@@ -131,8 +131,10 @@
     <h1>🦅 老鹰抓鱼</h1>
     <p>
       🎮 用 ← → ↑ ↓ 方向键（或WASD）控制老鹰<br>
-      🐟 抓到普通鱼得分，🦈 碰到鲨鱼失去一条命<br>
-      🌊 共三关，越来越难！风雨交加，小心躲避！
+      🐟 大鱼+2分 中鱼+1分 小鱼+0.5分<br>
+      🦈 碰到鲨鱼失去一条命<br>
+      ⏱️ 在水中超过1.5秒会自动飞回水面！<br>
+      🌊 共三关，达到5分过关，风雨越来越大！
     </p>
     <button class="menuBtn" id="startBtn">开始游戏</button>
   </div>
@@ -164,18 +166,60 @@ document.addEventListener('DOMContentLoaded', function() {
   const hudLives = document.getElementById('hudLives');
 
   // ===== Game State =====
-  let score = 0;
+  let score = 0;          // stored as integer×10 internally, displayed with 0.5 steps
   let lives = 3;
   let level = 1;
   let gameRunning = false;
   let animId = null;
 
+  // ===== Eagle underwater timer =====
+  // Counts frames the eagle has been below seaY()
+  let underwaterFrames = 0;
+  const UNDERWATER_LIMIT = 90; // 1.5 seconds × 60 fps = 90 frames
+  let forcedReturn = false;    // true while eagle is being pushed back up
+
   // ===== Level Config =====
+  // Fish speed is now FIXED at 1.5 for all levels — only wind/wave/rain change
   const levelConfig = {
-    1: { windX: 0,   windY: 0,   waveAmp: 10, waveSpeed: 0.02, rainCount: 0,  fishCount: 6, sharkCount: 1, fishSpeed: 1.2, targetScore: 8  },
-    2: { windX: 0.4, windY: 0.1, waveAmp: 22, waveSpeed: 0.04, rainCount: 60, fishCount: 7, sharkCount: 2, fishSpeed: 1.8, targetScore: 12 },
-    3: { windX: 0.9, windY: 0.2, waveAmp: 35, waveSpeed: 0.07, rainCount: 130,fishCount: 8, sharkCount: 3, fishSpeed: 2.6, targetScore: 18 }
+    1: { windX: 0,   windY: 0,   waveAmp: 10, waveSpeed: 0.02, rainCount: 0,   fishCount: 6, sharkCount: 1, fishSpeed: 1.5, targetScore: 50 },
+    2: { windX: 0.5, windY: 0.15,waveAmp: 28, waveSpeed: 0.055,rainCount: 80,  fishCount: 7, sharkCount: 2, fishSpeed: 1.5, targetScore: 50 },
+    3: { windX: 1.1, windY: 0.3, waveAmp: 45, waveSpeed: 0.09, rainCount: 150, fishCount: 8, sharkCount: 3, fishSpeed: 1.5, targetScore: 50 }
   };
+  // targetScore is stored ×10 (5 points = 50 in internal units)
+
+  // ===== Fish size categories & points =====
+  // Size determines display radius AND score:
+  //   big   size>=22 → 2 points  (stored as 20 internally)
+  //   medium size 16-21 → 1 point (stored as 10)
+  //   small  size<16  → 0.5 point (stored as 5)
+  const FISH_TYPES = [
+    { name:'大金鱼',  color:'#ff6600', size: 26 },  // big   +2
+    { name:'大金鲳',  color:'#ffd700', size: 24 },  // big   +2
+    { name:'中蓝鱼',  color:'#00aaff', size: 20 },  // medium+1
+    { name:'中绿鱼',  color:'#00cc44', size: 18 },  // medium+1
+    { name:'小彩鱼',  color:'#ff44cc', size: 13 },  // small +0.5
+    { name:'小红鱼',  color:'#ff2222', size: 11 },  // small +0.5
+  ];
+
+  // Return internal score value based on size
+  function fishPoints(size) {
+    if (size >= 22) return 20;   // 2 points
+    if (size >= 16) return 10;   // 1 point
+    return 5;                    // 0.5 points
+  }
+
+  // Display string for score popup
+  function fishPointsLabel(size) {
+    if (size >= 22) return '+2';
+    if (size >= 16) return '+1';
+    return '+0.5';
+  }
+
+  // Display score as decimal (internal ÷ 10)
+  function displayScore(s) {
+    if (s % 10 === 0) return String(s / 10);
+    return (s / 10).toFixed(1);
+  }
 
   // ===== Eagle =====
   const eagle = {
@@ -184,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
     vx: 0, vy: 0,
     speed: 3.5,
     wingPhase: 0,
-    invincible: 0,   // invincibility frames after hit
+    invincible: 0,
     diving: false
   };
 
@@ -208,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // ===== Birds (background) =====
+  // ===== Background Birds =====
   let bgBirds = [];
   function initBgBirds() {
     bgBirds = [];
@@ -242,17 +286,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // ===== Fish =====
   let fishes = [];
-  const FISH_TYPES = [
-    { name:'金鱼',  color:'#ff6600', points: 1, size: 18 },
-    { name:'蓝鱼',  color:'#00aaff', points: 2, size: 20 },
-    { name:'绿鱼',  color:'#00cc44', points: 3, size: 16 },
-    { name:'彩鱼',  color:'#ff44cc', points: 5, size: 14 },
-    { name:'金鲳鱼',color:'#ffd700', points: 2, size: 22 },
-  ];
 
   function spawnFish(cfg) {
     fishes = [];
-    // Normal fish
+    // Normal fish — mixed sizes
     for (let i = 0; i < cfg.fishCount; i++) {
       const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
       const dir = Math.random() < 0.5 ? 1 : -1;
@@ -263,7 +300,6 @@ document.addEventListener('DOMContentLoaded', function() {
         vy: (Math.random() - 0.5) * 0.6,
         size: ft.size,
         color: ft.color,
-        points: ft.points,
         shark: false,
         phase: Math.random() * Math.PI * 2,
         alive: true
@@ -279,7 +315,6 @@ document.addEventListener('DOMContentLoaded', function() {
         vy: (Math.random() - 0.5) * 0.4,
         size: 30,
         color: '#778899',
-        points: 0,
         shark: true,
         phase: Math.random() * Math.PI * 2,
         alive: true
@@ -299,6 +334,8 @@ document.addEventListener('DOMContentLoaded', function() {
     eagle.vx = 0;
     eagle.vy = 0;
     eagle.invincible = 0;
+    underwaterFrames = 0;
+    forcedReturn = false;
     initClouds();
     initBgBirds();
     initRain(cfg.rainCount);
@@ -309,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function updateHUD() {
-    hudScore.textContent = `分数: ${score}`;
+    hudScore.textContent = `分数: ${displayScore(score)}`;
     hudLives.textContent = '❤️'.repeat(Math.max(0, lives));
   }
 
@@ -379,7 +416,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // ===== Draw Eagle =====
   function drawEagle() {
     const e = eagle;
-    if (e.invincible > 0 && Math.floor(e.invincible / 5) % 2 === 0) return; // blink
+    // Blink when invincible
+    if (e.invincible > 0 && Math.floor(e.invincible / 5) % 2 === 0) return;
 
     ctx.save();
     ctx.translate(e.x, e.y);
@@ -419,14 +457,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Wings
     ctx.fillStyle = '#5C3310';
-    // Left wing (upper)
     ctx.beginPath();
     ctx.moveTo(0, -5);
     ctx.lineTo(-26, -10 + flap);
     ctx.lineTo(-20, 4);
     ctx.lineTo(0, 5);
     ctx.fill();
-    // Right wing hint
     ctx.beginPath();
     ctx.moveTo(5, -5);
     ctx.lineTo(-10, -12 + flap);
@@ -464,31 +500,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (f.vx < 0) ctx.scale(-1, 1);
 
     if (f.shark) {
-      // Shark body
       ctx.fillStyle = '#778899';
       ctx.beginPath();
       ctx.ellipse(0, 0, f.size, f.size * 0.45, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Dorsal fin
       ctx.fillStyle = '#5a6a7a';
       ctx.beginPath();
       ctx.moveTo(-5, -f.size * 0.45);
       ctx.lineTo(5, -f.size * 0.9);
       ctx.lineTo(15, -f.size * 0.45);
       ctx.fill();
-      // Tail
-      ctx.fillStyle = '#5a6a7a';
       ctx.beginPath();
       ctx.moveTo(-f.size, 0);
       ctx.lineTo(-f.size - 12, -10);
       ctx.lineTo(-f.size - 12, 10);
       ctx.fill();
-      // Eye
       ctx.fillStyle = '#000';
       ctx.beginPath();
       ctx.arc(f.size * 0.5, -4, 3, 0, Math.PI * 2);
       ctx.fill();
-      // Teeth
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.moveTo(f.size * 0.6, 3);
@@ -496,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.lineTo(f.size * 0.8, 3);
       ctx.fill();
     } else {
-      // Normal fish
+      // Normal fish — body
       ctx.fillStyle = f.color;
       ctx.beginPath();
       ctx.ellipse(0, 0, f.size, f.size * 0.5, 0, 0, Math.PI * 2);
@@ -523,13 +553,21 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.beginPath();
       ctx.arc(f.size * 0.6, -3.5, 1.5, 0, Math.PI * 2);
       ctx.fill();
-      // Scales pattern
+      // Scales
       ctx.strokeStyle = 'rgba(255,255,255,0.3)';
       ctx.lineWidth = 1;
       for (let s = -1; s <= 1; s++) {
         ctx.beginPath();
         ctx.arc(s * 6, 0, 5, Math.PI * 0.8, Math.PI * 2.2);
         ctx.stroke();
+      }
+      // Size label (small icon so player can tell size)
+      // Big fish get a small crown indicator
+      if (f.size >= 22) {
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('👑', 0, -f.size * 0.5 - 8);
       }
     }
     ctx.restore();
@@ -538,14 +576,12 @@ document.addEventListener('DOMContentLoaded', function() {
   // ===== Draw Sea =====
   function drawSea(cfg) {
     const sy = seaY();
-    // Sea gradient
     const grad = ctx.createLinearGradient(0, sy, 0, 700);
     grad.addColorStop(0, '#0077b6');
     grad.addColorStop(1, '#023e6e');
     ctx.fillStyle = grad;
     ctx.fillRect(0, sy, 600, 700 - sy);
 
-    // Wave surface
     ctx.fillStyle = '#00b4d8';
     ctx.beginPath();
     ctx.moveTo(0, sy);
@@ -559,7 +595,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.closePath();
     ctx.fill();
 
-    // Wave highlights
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 2;
     for (let w = 0; w < 3; w++) {
@@ -626,6 +661,38 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.restore();
   }
 
+  // ===== Draw underwater warning bar =====
+  function drawUnderwaterBar() {
+    if (underwaterFrames <= 0) return;
+    const ratio = underwaterFrames / UNDERWATER_LIMIT;
+    const barW = 160;
+    const barH = 12;
+    const bx = 300 - barW / 2;
+    const by = seaY() + 10;
+
+    // Background
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.roundRect(bx - 2, by - 2, barW + 4, barH + 4, 6);
+    ctx.fill();
+
+    // Fill — green → yellow → red
+    const r = Math.round(255 * ratio);
+    const g = Math.round(255 * (1 - ratio));
+    ctx.fillStyle = `rgb(${r},${g},20)`;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, barW * ratio, barH, 4);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('⏱️ 在水里太久！', 300, by + barH + 14);
+    ctx.restore();
+  }
+
   // ===== Score Popups =====
   let popups = [];
   function addPopup(x, y, text, color) {
@@ -680,34 +747,60 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!gameRunning) return;
     const cfg = levelConfig[level];
 
-    // Wind effect on eagle
-    eagle.vx += cfg.windX * 0.05;
-    eagle.vy += cfg.windY * 0.05;
+    // ---- Underwater timer ----
+    const inWater = eagle.y > seaY();
+    if (inWater) {
+      underwaterFrames++;
+    } else {
+      // Reset timer once eagle is above the surface
+      underwaterFrames = 0;
+      forcedReturn = false;
+    }
 
-    // Eagle controls
-    if (keys['ArrowLeft']  || keys['a'] || keys['A'])  eagle.vx -= eagle.speed * 0.2;
-    if (keys['ArrowRight'] || keys['d'] || keys['D'])  eagle.vx += eagle.speed * 0.2;
-    if (keys['ArrowUp']    || keys['w'] || keys['W'])  eagle.vy -= eagle.speed * 0.2;
-    if (keys['ArrowDown']  || keys['s'] || keys['S'])  eagle.vy += eagle.speed * 0.2;
+    // Trigger forced return when limit exceeded
+    if (underwaterFrames >= UNDERWATER_LIMIT) {
+      forcedReturn = true;
+    }
+
+    // Forced return: push eagle strongly upward until it clears the surface
+    if (forcedReturn) {
+      eagle.vy -= 0.6;                         // strong upward acceleration
+      eagle.vx *= 0.9;                         // dampen horizontal
+      // Show a warning popup occasionally
+      if (underwaterFrames % 20 === 0) {
+        addPopup(eagle.x, eagle.y - 20, '⬆️ 飞回去！', '#ff4444');
+      }
+    } else {
+      // Normal wind effect
+      eagle.vx += cfg.windX * 0.05;
+      eagle.vy += cfg.windY * 0.05;
+
+      // Eagle controls
+      if (keys['ArrowLeft']  || keys['a'] || keys['A'])  eagle.vx -= eagle.speed * 0.2;
+      if (keys['ArrowRight'] || keys['d'] || keys['D'])  eagle.vx += eagle.speed * 0.2;
+      if (keys['ArrowUp']    || keys['w'] || keys['W'])  eagle.vy -= eagle.speed * 0.2;
+      if (keys['ArrowDown']  || keys['s'] || keys['S'])  eagle.vy += eagle.speed * 0.2;
+    }
 
     // Damping
     eagle.vx *= 0.85;
     eagle.vy *= 0.85;
 
-    // Clamp speed
+    // Clamp speed (allow faster escape during forced return)
+    const maxSpd = forcedReturn ? eagle.speed * 2 : eagle.speed;
     const spd = Math.sqrt(eagle.vx ** 2 + eagle.vy ** 2);
-    if (spd > eagle.speed) {
-      eagle.vx = (eagle.vx / spd) * eagle.speed;
-      eagle.vy = (eagle.vy / spd) * eagle.speed;
+    if (spd > maxSpd) {
+      eagle.vx = (eagle.vx / spd) * maxSpd;
+      eagle.vy = (eagle.vy / spd) * maxSpd;
     }
 
     eagle.x += eagle.vx;
     eagle.y += eagle.vy;
     eagle.wingPhase += 0.18;
 
-    // Eagle bounds — can go into sea slightly for catching fish
+    // Eagle bounds
     eagle.x = Math.max(26, Math.min(574, eagle.x));
-    eagle.y = Math.max(30, Math.min(550, eagle.y));
+    eagle.y = Math.max(30, Math.min(650, eagle.y));  // can go a bit deeper while diving
 
     // Invincibility countdown
     if (eagle.invincible > 0) eagle.invincible--;
@@ -740,7 +833,6 @@ document.addEventListener('DOMContentLoaded', function() {
       f.x += f.vx;
       f.y += f.vy + Math.sin(f.phase) * 0.4;
 
-      // Sea bounds
       if (f.y < seaY() + 15) { f.y = seaY() + 15; f.vy = Math.abs(f.vy) + 0.1; }
       if (f.y > 680) { f.y = 680; f.vy = -Math.abs(f.vy) - 0.1; }
       if (f.x < 10)  { f.x = 10;  f.vx = Math.abs(f.vx); }
@@ -761,38 +853,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (dist < hitR) {
           if (f.shark) {
-            // Hit shark!
             lives--;
             eagle.invincible = 90;
             spawnParticles(eagle.x, eagle.y, '#ff4444');
             addPopup(eagle.x, eagle.y - 30, '💥 被鲨鱼咬了！', '#ff4444');
             updateHUD();
             if (lives <= 0) {
-              setTimeout(() => showOverlay('💀 游戏结束', `最终得分: ${score}`, '再来一次'), 400);
+              setTimeout(() => showOverlay('💀 游戏结束', `最终得分: ${displayScore(score)}`, '再来一次'), 400);
             }
           } else {
-            // Caught fish!
+            // Caught a fish — award points based on size
             f.alive = false;
-            score += f.points;
+            const pts = fishPoints(f.size);
+            score += pts;
             spawnParticles(f.x, f.y, f.color);
-            addPopup(f.x, f.y - 20, `+${f.points}`, '#FFD700');
+            addPopup(f.x, f.y - 20, fishPointsLabel(f.size), '#FFD700');
             updateHUD();
           }
         }
       }
     }
 
-    // Check level complete
+    // Check level complete (target: 5 points = 50 internal)
     const cfg2 = levelConfig[level];
     if (score >= cfg2.targetScore) {
       if (level < 3) {
         gameRunning = false;
         setTimeout(() => {
-          showOverlay(`🎉 第${level}关通过！`, `得分: ${score} / 目标: ${cfg2.targetScore}\n继续挑战第${level+1}关！`, `第${level+1}关`);
+          showOverlay(
+            `🎉 第${level}关通过！`,
+            `得分: ${displayScore(score)} / 目标: 5分\n继续挑战第${level+1}关！`,
+            `第${level+1}关`
+          );
         }, 300);
       } else {
         gameRunning = false;
-        setTimeout(() => showOverlay('🏆 你赢了！', `全部三关通过！最终得分: ${score}`, '再玩一次'), 300);
+        setTimeout(() => showOverlay('🏆 你赢了！', `全部三关通过！最终得分: ${displayScore(score)}`, '再玩一次'), 300);
       }
     }
   }
@@ -805,33 +901,44 @@ document.addEventListener('DOMContentLoaded', function() {
     drawSky();
     drawWind(cfg);
 
-    // Clouds
     for (const c of clouds) drawCloud(c);
-    // Bg birds
     for (const b of bgBirds) drawBgBird(b);
-    // Rain
     drawRain(cfg);
-    // Sea
     drawSea(cfg);
-    // Fish (only below sea line - they swim in water)
     for (const f of fishes) drawFish(f);
-    // Eagle
     drawEagle();
-    // Particles & Popups
     drawParticles();
     drawPopups();
 
-    // Level target indicator
-    const cfg3 = levelConfig[level];
+    // Underwater warning bar (shown when eagle is in water)
+    drawUnderwaterBar();
+
+    // Level target indicator at bottom
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
-    ctx.roundRect(200, 668, 200, 24, 8);
+    ctx.roundRect(190, 668, 220, 24, 8);
     ctx.fill();
     ctx.fillStyle = '#ffd700';
     ctx.font = '13px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`目标分数: ${score} / ${cfg3.targetScore}`, 300, 685);
+    ctx.fillText(`目标: ${displayScore(score)} / 5分`, 300, 685);
+    ctx.restore();
+
+    // Fish size legend (top-right corner, small)
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.roundRect(470, 50, 120, 60, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '11px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('👑大鱼 +2分', 480, 68);
+    ctx.fillStyle = '#aef';
+    ctx.fillText('●中鱼 +1分', 480, 85);
+    ctx.fillStyle = '#faa';
+    ctx.fillText('·小鱼 +0.5分', 480, 102);
     ctx.restore();
   }
 
@@ -853,8 +960,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!touchStart) return;
     const dx = e.touches[0].clientX - touchStart.x;
     const dy = e.touches[0].clientY - touchStart.y;
-    eagle.vx += dx * 0.04;
-    eagle.vy += dy * 0.04;
+    // During forced return, only allow upward touch input
+    if (!forcedReturn) {
+      eagle.vx += dx * 0.04;
+      eagle.vy += dy * 0.04;
+    }
     touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }, { passive: false });
   canvas.addEventListener('touchend', () => { touchStart = null; });
@@ -870,7 +980,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnText === '再来一次' || btnText === '再玩一次') {
       startGame();
     } else if (btnText.includes('关')) {
-      // Next level
+      // Advance to next level — score carries over
       level++;
       initLevel(level);
       gameRunning = true;
