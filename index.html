@@ -175,6 +175,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const UNDERWATER_LIMIT = 90;  // 1.5s × 60fps
   let forcedReturn = false;
 
+  // ===== Fish spawning =====
+  // Each level has a max live fish count and a spawn interval (frames)
+  const FISH_MAX = { 1: 6, 2: 8, 3: 10 };       // max normal fish on screen at once
+  const SHARK_MAX = { 1: 1, 2: 2, 3: 3 };        // max sharks on screen at once
+  const SPAWN_INTERVAL = { 1: 180, 2: 120, 3: 80 }; // frames between spawn attempts
+  let spawnTimer = 0;  // counts frames since last spawn attempt
+
   // ===== Level config =====
   // targetScore = 6 points × 10 = 60
   const levelConfig = {
@@ -184,9 +191,6 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   // ===== Fish type table =====
-  // big: size>=22 → 1.5pts (internal 15)
-  // mid: size 15-21 → 1pt (internal 10)
-  // sml: size<15   → 0.5pt (internal 5)
   const FISH_TYPES = [
     { color:'#ff6600', size:27 },  // big
     { color:'#ffd700', size:25 },  // big
@@ -229,7 +233,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const keys = {};
   document.addEventListener('keydown', e => {
     keys[e.key] = true;
-    // Prevent page scrolling with arrow keys during gameplay
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && gameRunning) {
       e.preventDefault();
     }
@@ -247,7 +250,6 @@ document.addEventListener('DOMContentLoaded', function() {
         w: 70 + Math.random() * 90,
         speed: 0.25 + Math.random() * 0.45,
         alpha: 0.75 + Math.random() * 0.25,
-        // Cartoonish pastel tint
         r: 240+Math.floor(Math.random()*15),
         g: 240+Math.floor(Math.random()*15),
         b: 255
@@ -288,11 +290,57 @@ document.addEventListener('DOMContentLoaded', function() {
   // ===== Waves =====
   let waveOffset = 0;
 
-  // ===== Fish =====
+  // ===== Fish array =====
   let fishes = [];
 
+  // ===== Create a single new fish (normal) =====
+  function createFish(cfg) {
+    const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    // Spawn from left or right edge, or random position deep in water
+    const spawnEdge = Math.random() < 0.4;
+    const sx = spawnEdge ? (dir === 1 ? -ft.size : 600 + ft.size) : Math.random() * 560 + 20;
+    return {
+      x: sx,
+      y: 450 + Math.random() * 200,
+      vx: (0.4 + Math.random() * cfg.fishSpeed) * dir,
+      vy: (Math.random() - 0.5) * 0.6,
+      size: ft.size,
+      color: ft.color,
+      shark: false,
+      phase: Math.random() * Math.PI * 2,
+      alive: true,
+      beingPushed: false,
+      pushTimer: 0,
+      // Small fade-in so fish "swim in" smoothly
+      fadeIn: 30,
+    };
+  }
+
+  // ===== Create a single new shark =====
+  function createShark(cfg) {
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    const sx = dir === 1 ? -35 : 635; // always enters from the side
+    return {
+      x: sx,
+      y: 460 + Math.random() * 180,
+      vx: (0.8 + Math.random() * cfg.fishSpeed * 0.9) * dir,
+      vy: (Math.random() - 0.5) * 0.35,
+      size: 30,
+      color: '#778899',
+      shark: true,
+      phase: Math.random() * Math.PI * 2,
+      alive: true,
+      beingPushed: false,
+      pushTimer: 0,
+      fadeIn: 30,
+    };
+  }
+
+  // ===== Initial fish spawn (fills the sea at level start) =====
   function spawnFish(cfg) {
     fishes = [];
+    // Spawn initial fish without edge-entry (random positions)
     for (let i = 0; i < cfg.fishCount; i++) {
       const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
       const dir = Math.random() < 0.5 ? 1 : -1;
@@ -306,9 +354,9 @@ document.addEventListener('DOMContentLoaded', function() {
         shark: false,
         phase: Math.random() * Math.PI * 2,
         alive: true,
-        // for pushed-to-surface animation
         beingPushed: false,
-        pushTimer: 0
+        pushTimer: 0,
+        fadeIn: 0,
       });
     }
     for (let i = 0; i < cfg.sharkCount; i++) {
@@ -324,8 +372,34 @@ document.addEventListener('DOMContentLoaded', function() {
         phase: Math.random() * Math.PI * 2,
         alive: true,
         beingPushed: false,
-        pushTimer: 0
+        pushTimer: 0,
+        fadeIn: 0,
       });
+    }
+  }
+
+  // ===== Try to spawn new fish to keep the sea populated =====
+  function trySpawnFish() {
+    const cfg = levelConfig[level];
+    const maxFish  = FISH_MAX[level];
+    const maxShark = SHARK_MAX[level];
+
+    // Count currently alive fish and sharks
+    const aliveFish  = fishes.filter(f => f.alive && !f.shark).length;
+    const aliveShark = fishes.filter(f => f.alive && f.shark).length;
+
+    // Remove dead fish that have been gone for a while (keep array tidy)
+    // We only keep fish that are alive OR were just collected (handled by alive flag already)
+    fishes = fishes.filter(f => f.alive);
+
+    // Spawn new normal fish if below max
+    if (aliveFish < maxFish) {
+      fishes.push(createFish(cfg));
+    }
+
+    // Spawn new shark if below max
+    if (aliveShark < maxShark) {
+      fishes.push(createShark(cfg));
     }
   }
 
@@ -343,6 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     forcedReturn = false;
     popups = [];
     particles = [];
+    spawnTimer = 0;
     initClouds();
     initBgBirds();
     initRain(cfg.rainCount);
@@ -403,7 +478,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.arc(c.x+c.w*0.16, c.y+c.w*0.09, c.w * 0.20, 0, Math.PI*2);
     ctx.arc(c.x+c.w*0.40, c.y+c.w*0.09, c.w * 0.18, 0, Math.PI*2);
     ctx.fill();
-    // cute outline
     ctx.globalAlpha = c.alpha * 0.25;
     ctx.strokeStyle = '#aac0ff';
     ctx.lineWidth = 2;
@@ -433,7 +507,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (e.vx < 0) ctx.scale(-1,1);
     const flap = Math.sin(e.wingPhase) * 13;
 
-    // Shadow
     ctx.save();
     ctx.globalAlpha = 0.15;
     ctx.fillStyle = '#000';
@@ -442,13 +515,11 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.fill();
     ctx.restore();
 
-    // Body
     ctx.fillStyle = '#8B4513';
     ctx.beginPath();
     ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // Wing left (back)
     ctx.fillStyle = '#4a2008';
     ctx.beginPath();
     ctx.moveTo(-2, -4);
@@ -457,7 +528,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.lineTo(-2, 6);
     ctx.fill();
 
-    // Wing right (front)
     ctx.fillStyle = '#5C3310';
     ctx.beginPath();
     ctx.moveTo(4, -5);
@@ -466,7 +536,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.closePath();
     ctx.fill();
 
-    // Tail
     ctx.fillStyle = '#7a3a10';
     ctx.beginPath();
     ctx.moveTo(-17, 2);
@@ -474,13 +543,11 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.lineTo(-26, -1);
     ctx.fill();
 
-    // Head (white eagle)
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(18, -7, 9, 0, Math.PI*2);
     ctx.fill();
 
-    // Eye
     ctx.fillStyle = '#222';
     ctx.beginPath();
     ctx.arc(21.5, -9, 2.2, 0, Math.PI*2);
@@ -490,7 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.arc(22.3, -9.5, 0.8, 0, Math.PI*2);
     ctx.fill();
 
-    // Beak
     ctx.fillStyle = '#FFD700';
     ctx.beginPath();
     ctx.moveTo(25, -5.5);
@@ -504,7 +570,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.lineTo(25, -1.5);
     ctx.fill();
 
-    // Talons
     ctx.strokeStyle = '#FFD700';
     ctx.lineWidth = 2.2;
     ctx.lineCap = 'round';
@@ -521,30 +586,33 @@ document.addEventListener('DOMContentLoaded', function() {
   function drawFish(f) {
     if (!f.alive) return;
     ctx.save();
+
+    // Fade-in effect for newly spawned fish
+    if (f.fadeIn > 0) {
+      ctx.globalAlpha = 1 - (f.fadeIn / 30);
+      f.fadeIn--;
+    }
+
     ctx.translate(f.x, f.y);
     if (f.vx < 0) ctx.scale(-1,1);
 
     if (f.shark) {
-      // Shark body
       ctx.fillStyle = '#778899';
       ctx.beginPath();
       ctx.ellipse(0, 0, f.size, f.size*0.42, 0, 0, Math.PI*2);
       ctx.fill();
-      // Dorsal fin
       ctx.fillStyle = '#5a6a7a';
       ctx.beginPath();
       ctx.moveTo(-2, -f.size*0.42);
       ctx.lineTo(8, -f.size*1.0);
       ctx.lineTo(16, -f.size*0.42);
       ctx.fill();
-      // Tail
       ctx.fillStyle = '#5a6a7a';
       ctx.beginPath();
       ctx.moveTo(-f.size, 0);
       ctx.lineTo(-f.size-14, -11);
       ctx.lineTo(-f.size-14, 11);
       ctx.fill();
-      // Eye
       ctx.fillStyle = '#000';
       ctx.beginPath();
       ctx.arc(f.size*0.5, -4, 3.5, 0, Math.PI*2);
@@ -553,20 +621,17 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.beginPath();
       ctx.arc(f.size*0.5+1, -5, 1.2, 0, Math.PI*2);
       ctx.fill();
-      // Teeth
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.moveTo(f.size*0.55, 3);
       ctx.lineTo(f.size*0.65, 9);
       ctx.lineTo(f.size*0.75, 3);
       ctx.fill();
-      // Danger label
       ctx.fillStyle = '#ff3333';
       ctx.font = 'bold 10px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('⚠️', 0, -f.size - 4);
     } else {
-      // Fish body with gradient
       const grad = ctx.createRadialGradient(-f.size*0.2, -f.size*0.15, 1, 0, 0, f.size);
       grad.addColorStop(0, lightenColor(f.color, 60));
       grad.addColorStop(1, f.color);
@@ -574,25 +639,21 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.beginPath();
       ctx.ellipse(0, 0, f.size, f.size*0.5, 0, 0, Math.PI*2);
       ctx.fill();
-      // Outline
       ctx.strokeStyle = 'rgba(0,0,0,0.15)';
       ctx.lineWidth = 1;
       ctx.stroke();
-      // Tail
       ctx.fillStyle = f.color;
       ctx.beginPath();
       ctx.moveTo(-f.size+2, 0);
       ctx.lineTo(-f.size-10, -7);
       ctx.lineTo(-f.size-10, 7);
       ctx.fill();
-      // Top fin
       ctx.fillStyle = lightenColor(f.color, 40) + 'bb';
       ctx.beginPath();
       ctx.moveTo(-3, -f.size*0.5);
       ctx.lineTo(5, -f.size*0.5-7);
       ctx.lineTo(10, -f.size*0.5);
       ctx.fill();
-      // Eye
       ctx.fillStyle = '#fff';
       ctx.beginPath();
       ctx.arc(f.size*0.5, -3, 3.5, 0, Math.PI*2);
@@ -605,7 +666,6 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.beginPath();
       ctx.arc(f.size*0.58, -4.2, 0.8, 0, Math.PI*2);
       ctx.fill();
-      // Scales
       ctx.strokeStyle = 'rgba(255,255,255,0.35)';
       ctx.lineWidth = 1;
       for (let s = -1; s <= 1; s++) {
@@ -613,13 +673,11 @@ document.addEventListener('DOMContentLoaded', function() {
         ctx.arc(s*6, 0, 5, Math.PI*0.75, Math.PI*2.25);
         ctx.stroke();
       }
-      // Crown for big fish
       if (f.size >= 22) {
         ctx.font = '12px Arial';
         ctx.textAlign = 'center';
         ctx.fillText('👑', 0, -f.size*0.5 - 9);
       }
-      // Bubble (cute)
       if (Math.sin(f.phase*1.7) > 0.7) {
         ctx.save();
         ctx.globalAlpha = 0.5;
@@ -634,7 +692,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.restore();
   }
 
-  // Helper: lighten a hex color by amt
   function lightenColor(hex, amt) {
     let c = hex.replace('#','');
     if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
@@ -661,8 +718,7 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.fillStyle = grad;
     ctx.fillRect(0,0,600,sy);
 
-    // Sun (only level 1)
-    if (cfg.rainCount === 0) {
+    if (levelConfig[level].rainCount === 0) {
       ctx.save();
       ctx.beginPath();
       ctx.arc(520, 60, 32, 0, Math.PI*2);
@@ -685,7 +741,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.fillStyle = grad;
     ctx.fillRect(0,sy,600,700-sy);
 
-    // Wave surface
     ctx.fillStyle = '#48cae4';
     ctx.beginPath();
     ctx.moveTo(0,sy);
@@ -698,7 +753,6 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.closePath();
     ctx.fill();
 
-    // White wave lines
     ctx.lineWidth = 2;
     for (let w=0; w<3; w++) {
       ctx.strokeStyle = `rgba(255,255,255,${0.22-w*0.05})`;
@@ -711,7 +765,6 @@ document.addEventListener('DOMContentLoaded', function() {
       ctx.stroke();
     }
 
-    // Foam dots at wave top
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     for (let x=0; x<600; x+=40) {
       const y = sy + Math.sin(x*0.022+waveOffset)*cfg.waveAmp + 2;
@@ -833,6 +886,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!gameRunning) return;
     const cfg = levelConfig[level];
 
+    // ---- Continuous fish spawning ----
+    spawnTimer++;
+    if (spawnTimer >= SPAWN_INTERVAL[level]) {
+      spawnTimer = 0;
+      trySpawnFish();
+    }
+
     // Underwater timer
     const inWater = eagle.y > seaY();
     if (inWater) {
@@ -904,13 +964,11 @@ document.addEventListener('DOMContentLoaded', function() {
       if (!f.alive) continue;
       f.phase += 0.055;
 
-      // Being pushed to surface
       if (f.beingPushed) {
         f.pushTimer--;
-        f.vy -= 0.4;  // push upward
+        f.vy -= 0.4;
         f.y += f.vy;
         if (f.y <= seaY() + f.size + 5 || f.pushTimer <= 0) {
-          // Arrived at surface — reset and continue swimming
           f.y = seaY() + f.size + 5;
           f.vy = Math.abs(f.vy)*0.3 + 0.2;
           f.beingPushed = false;
@@ -941,7 +999,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
       if (dist < hitR) {
         if (f.shark) {
-          // Shark — only damages if eagle is not invincible
           if (eagle.invincible === 0) {
             lives--;
             eagle.invincible = 100;
@@ -955,9 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           }
         } else {
-          // Normal fish
           if (forcedReturn) {
-            // During forced return: NO score, push fish to surface
             if (!f.beingPushed) {
               f.beingPushed = true;
               f.pushTimer = 40;
@@ -966,7 +1021,7 @@ document.addEventListener('DOMContentLoaded', function() {
               addPopup(f.x, f.y-20, '💦', '#88ccff');
             }
           } else {
-            // Normal catch — award points
+            // Caught! Mark dead, award score, then a new fish will spawn shortly
             f.alive = false;
             const pts = fishPoints(f.size);
             score += pts;
@@ -977,6 +1032,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       }
     }
+
+    // Clean up dead fish so the array stays tidy
+    fishes = fishes.filter(f => f.alive);
 
     // Level clear check
     if (!levelClearing && score >= levelConfig[level].targetScore) {
@@ -1010,7 +1068,6 @@ document.addEventListener('DOMContentLoaded', function() {
     drawRain(cfg);
     drawSea(cfg);
 
-    // Underwater glow around eagle when submerged
     if (eagle.y > seaY()) {
       ctx.save();
       ctx.globalAlpha = 0.18;
@@ -1039,32 +1096,34 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath(); ctx.roundRect(bx-2,by-2,barW+4,barH+4,8); ctx.fill();
-    // bg track
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.beginPath(); ctx.roundRect(bx,by,barW,barH,6); ctx.fill();
-    // fill
     const progGrad = ctx.createLinearGradient(bx,0,bx+barW,0);
     progGrad.addColorStop(0,'#00e676');
     progGrad.addColorStop(1,'#ffd600');
     ctx.fillStyle = progGrad;
     ctx.beginPath(); ctx.roundRect(bx,by,barW*prog,barH,6); ctx.fill();
-    // label
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 12px Arial';
     ctx.textAlign = 'center';
     ctx.fillText(`目标: ${displayScore(score)} / 6分`, 300, by+barH+14);
     ctx.restore();
 
-    // Legend
+    // Fish count indicator (shows how many fish are currently in the sea)
+    const aliveFishCount = fishes.filter(f => !f.shark).length;
+    const aliveSharkCount = fishes.filter(f => f.shark).length;
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.38)';
-    ctx.beginPath(); ctx.roundRect(465,48,128,66,9); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(465,48,128,80,9); ctx.fill();
     ctx.font = '11px Arial';
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffd700'; ctx.fillText('👑 大鱼  +1.5分', 474,66);
     ctx.fillStyle = '#aef';    ctx.fillText('●  中鱼  +1分',  474,82);
     ctx.fillStyle = '#faa';    ctx.fillText('·  小鱼  +0.5分',474,98);
     ctx.fillStyle = '#f66';    ctx.fillText('⚠️ 鲨鱼  危险!', 474,114);
+    // Live fish counter
+    ctx.fillStyle = '#cff';
+    ctx.fillText(`🐟×${aliveFishCount}  🦈×${aliveSharkCount}`, 474, 130);
     ctx.restore();
   }
 
