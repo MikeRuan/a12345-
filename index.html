@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>老鹰抓鱼 🦅</title>
+<title>老鹰抓鱼</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -17,11 +17,11 @@
   }
   #gameContainer {
     position: relative;
-    width: 480px;
-    height: 640px;
+    width: 600px;
+    height: 700px;
     overflow: hidden;
     border-radius: 16px;
-    box-shadow: 0 0 40px rgba(0,200,255,0.4);
+    box-shadow: 0 0 40px rgba(0,150,255,0.5);
   }
   #gameCanvas {
     position: absolute;
@@ -29,654 +29,879 @@
     z-index: 1;
     display: none;
   }
+  /* Start screen */
   #startScreen {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
     z-index: 100;
     pointer-events: auto;
+    background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 55%, #006994 55%, #004d6e 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 55%, #1565C0 55%, #1976D2 100%);
+    gap: 18px;
   }
   #startScreen h1 {
-    font-size: 42px;
+    font-size: 48px;
     color: #fff;
-    text-shadow: 3px 3px 0 #c8621a, -1px -1px 0 #c8621a;
-    margin-bottom: 8px;
+    text-shadow: 3px 3px 0 #e07b00, -1px -1px 0 #c06000;
     letter-spacing: 4px;
   }
-  #startScreen .subtitle {
-    font-size: 16px;
-    color: #fff3e0;
-    margin-bottom: 30px;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  #startScreen p {
+    font-size: 15px;
+    color: #fff;
+    background: rgba(0,0,0,0.3);
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-align: center;
+    line-height: 1.8;
+    max-width: 440px;
   }
-  .eagle-icon { font-size: 80px; margin-bottom: 16px; animation: float 2s ease-in-out infinite; }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-  .rules-box {
-    background: rgba(255,255,255,0.85);
-    border-radius: 14px;
-    padding: 16px 24px;
-    margin-bottom: 28px;
-    max-width: 340px;
-    text-align: left;
-  }
-  .rules-box h3 { color: #c8621a; margin-bottom: 8px; font-size: 16px; }
-  .rules-box p { font-size: 13px; color: #333; line-height: 1.8; }
-  .rules-box span { font-size: 15px; }
-  #startBtn {
+  .menuBtn {
     background: linear-gradient(135deg, #ff8c00, #ff4500);
     color: white;
     border: none;
-    padding: 16px 48px;
-    font-size: 22px;
-    border-radius: 50px;
+    padding: 14px 40px;
+    font-size: 20px;
+    border-radius: 30px;
     cursor: pointer;
-    font-weight: bold;
-    letter-spacing: 2px;
-    box-shadow: 0 6px 20px rgba(255,100,0,0.5);
-    transition: transform 0.1s, box-shadow 0.1s;
-    position: relative;
-    z-index: 200;
+    box-shadow: 0 5px 15px rgba(255,100,0,0.5);
+    transition: transform 0.1s;
+    pointer-events: auto;
   }
-  #startBtn:hover { transform: scale(1.07); box-shadow: 0 8px 28px rgba(255,100,0,0.7); }
-  #gameOverScreen {
+  .menuBtn:hover { transform: scale(1.07); }
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 10px; left: 10px; right: 10px;
+    z-index: 50;
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+  }
+  .hudBox {
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  /* Overlay screens */
+  #overlayScreen {
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    z-index: 100;
+    z-index: 200;
     pointer-events: auto;
     display: none;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(0,0,0,0.75);
+    gap: 16px;
+    background: rgba(0,0,0,0.65);
   }
-  #gameOverScreen h2 { font-size: 48px; color: #ff4444; text-shadow: 2px 2px 0 #800; margin-bottom: 10px; }
-  #gameOverScreen .score-display {
-    font-size: 22px; color: #ffd700; margin-bottom: 6px;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-  }
-  #gameOverScreen .high-score-display {
-    font-size: 17px; color: #aaa; margin-bottom: 30px;
-  }
-  #restartBtn {
-    background: linear-gradient(135deg, #00c853, #00796b);
-    color: white;
-    border: none;
-    padding: 14px 44px;
-    font-size: 20px;
-    border-radius: 50px;
-    cursor: pointer;
-    font-weight: bold;
-    box-shadow: 0 6px 20px rgba(0,200,100,0.5);
-    transition: transform 0.1s;
-    position: relative;
-    z-index: 200;
-  }
-  #restartBtn:hover { transform: scale(1.07); }
-  #hud {
-    position: absolute;
-    top: 10px; left: 0; right: 0;
-    z-index: 50;
-    display: none;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 14px;
-    pointer-events: none;
-  }
-  .hud-box {
-    background: rgba(0,0,0,0.45);
-    border-radius: 20px;
-    padding: 5px 14px;
+  #overlayScreen h2 {
+    font-size: 42px;
     color: #fff;
-    font-size: 15px;
-    font-weight: bold;
+    text-shadow: 2px 2px 6px #000;
   }
-  .hud-box span { font-size: 18px; }
-  #livesDisplay { color: #ff6b6b; }
-  #scoreDisplay { color: #ffd700; }
-  #levelDisplay { color: #69f0ae; }
+  #overlayScreen p {
+    font-size: 18px;
+    color: #ffd700;
+  }
 </style>
 </head>
 <body>
 <div id="gameContainer">
-  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <canvas id="gameCanvas" width="600" height="700"></canvas>
 
+  <!-- HUD -->
   <div id="hud">
-    <div class="hud-box" id="livesDisplay">❤️ <span id="livesVal">3</span></div>
-    <div class="hud-box" id="scoreDisplay">🐟 <span id="scoreVal">0</span></div>
-    <div class="hud-box" id="levelDisplay">Lv.<span id="levelVal">1</span></div>
+    <div class="hudBox" id="hudScore">分数: 0</div>
+    <div class="hudBox" id="hudLevel">第1关</div>
+    <div class="hudBox" id="hudLives">❤️❤️❤️</div>
   </div>
 
+  <!-- Start Screen -->
   <div id="startScreen">
-    <div class="eagle-icon">🦅</div>
-    <h1>老鹰抓鱼</h1>
-    <p class="subtitle">Eagle Fishing Master</p>
-    <div class="rules-box">
-      <h3>🎮 游戏说明</h3>
-      <p><span>🖱️ 鼠标/手指</span> 控制老鹰移动</p>
-      <p><span>🐟</span> 点击屏幕俯冲入水抓鱼得分</p>
-      <p><span>🐊</span> 碰到鳄鱼会失去生命</p>
-      <p><span>🐦</span> 小心天上的其他鸟儿</p>
-      <p><span>❤️</span> 共有 3 条命，加油！</p>
-    </div>
-    <button id="startBtn">🦅 开始游戏</button>
+    <h1>🦅 老鹰抓鱼</h1>
+    <p>
+      🎮 用 ← → ↑ ↓ 方向键（或WASD）控制老鹰<br>
+      🐟 抓到普通鱼得分，🦈 碰到鲨鱼失去一条命<br>
+      🌊 共三关，越来越难！风雨交加，小心躲避！
+    </p>
+    <button class="menuBtn" id="startBtn">开始游戏</button>
   </div>
 
-  <div id="gameOverScreen">
-    <h2>💀 游戏结束</h2>
-    <div class="score-display">得分：<span id="finalScore">0</span> 条鱼</div>
-    <div class="high-score-display">最高分：<span id="highScoreVal">0</span> 条鱼</div>
-    <button id="restartBtn">🔄 再玩一次</button>
+  <!-- Overlay (level clear / game over / win) -->
+  <div id="overlayScreen">
+    <h2 id="overlayTitle">过关！</h2>
+    <p id="overlayMsg">得分: 0</p>
+    <button class="menuBtn" id="overlayBtn">继续</button>
+    <button class="menuBtn" id="menuBtn" style="background:linear-gradient(135deg,#555,#222);">返回菜单</button>
   </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // ─── Elements ───────────────────────────────────────────
+  // ===== DOM References =====
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
   const startScreen = document.getElementById('startScreen');
-  const gameOverScreen = document.getElementById('gameOverScreen');
   const hud = document.getElementById('hud');
-  const livesVal = document.getElementById('livesVal');
-  const scoreVal = document.getElementById('scoreVal');
-  const levelVal = document.getElementById('levelVal');
-  const finalScore = document.getElementById('finalScore');
-  const highScoreVal = document.getElementById('highScoreVal');
+  const overlayScreen = document.getElementById('overlayScreen');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayMsg = document.getElementById('overlayMsg');
+  const overlayBtn = document.getElementById('overlayBtn');
+  const menuBtn = document.getElementById('menuBtn');
+  const hudScore = document.getElementById('hudScore');
+  const hudLevel = document.getElementById('hudLevel');
+  const hudLives = document.getElementById('hudLives');
 
-  // ─── Game State ─────────────────────────────────────────
-  let score = 0, lives = 3, level = 1, highScore = 0;
+  // ===== Game State =====
+  let score = 0;
+  let lives = 3;
+  let level = 1;
   let gameRunning = false;
-  let animFrame = null;
-  let tick = 0;
-  const WATER_Y = H * 0.52;
+  let animId = null;
 
-  // ─── Eagle ──────────────────────────────────────────────
-  const eagle = {
-    x: W / 2, y: 120,
-    w: 54, h: 38,
-    targetX: W / 2, targetY: 120,
-    vx: 0, vy: 0,
-    diving: false,
-    returning: false,
-    inWater: false,
-    invincible: 0,
-    catchEffect: 0,
-    diveStartY: 0
+  // ===== Level Config =====
+  const levelConfig = {
+    1: { windX: 0,   windY: 0,   waveAmp: 10, waveSpeed: 0.02, rainCount: 0,  fishCount: 6, sharkCount: 1, fishSpeed: 1.2, targetScore: 8  },
+    2: { windX: 0.4, windY: 0.1, waveAmp: 22, waveSpeed: 0.04, rainCount: 60, fishCount: 7, sharkCount: 2, fishSpeed: 1.8, targetScore: 12 },
+    3: { windX: 0.9, windY: 0.2, waveAmp: 35, waveSpeed: 0.07, rainCount: 130,fishCount: 8, sharkCount: 3, fishSpeed: 2.6, targetScore: 18 }
   };
 
-  // ─── Clouds ─────────────────────────────────────────────
-  const clouds = [];
-  for (let i = 0; i < 5; i++) {
-    clouds.push({
-      x: Math.random() * W,
-      y: 30 + Math.random() * (WATER_Y * 0.45),
-      w: 60 + Math.random() * 70,
-      h: 30 + Math.random() * 20,
-      speed: 0.4 + Math.random() * 0.5
-    });
-  }
-  function spawnCloud() {
-    clouds.push({
-      x: W + 60,
-      y: 30 + Math.random() * (WATER_Y * 0.45),
-      w: 60 + Math.random() * 70,
-      h: 30 + Math.random() * 20,
-      speed: 0.4 + Math.random() * 0.5
-    });
-  }
+  // ===== Eagle =====
+  const eagle = {
+    x: 280, y: 200,
+    w: 52, h: 40,
+    vx: 0, vy: 0,
+    speed: 3.5,
+    wingPhase: 0,
+    invincible: 0,   // invincibility frames after hit
+    diving: false
+  };
 
-  // ─── Birds (obstacles in sky) ───────────────────────────
-  const birds = [];
-  function spawnBird() {
-    const fromLeft = Math.random() < 0.5;
-    birds.push({
-      x: fromLeft ? -40 : W + 40,
-      y: 40 + Math.random() * (WATER_Y * 0.6),
-      dir: fromLeft ? 1 : -1,
-      speed: 1.2 + Math.random() * 1.5 + level * 0.2,
-      wingFrame: 0
-    });
-  }
+  // ===== Input =====
+  const keys = {};
+  document.addEventListener('keydown', e => { keys[e.key] = true; });
+  document.addEventListener('keyup',   e => { keys[e.key] = false; });
 
-  // ─── Fish ────────────────────────────────────────────────
-  const fishes = [];
-  function spawnFish() {
-    fishes.push({
-      x: Math.random() * (W - 60) + 30,
-      y: WATER_Y + 30 + Math.random() * (H - WATER_Y - 80),
-      dir: Math.random() < 0.5 ? 1 : -1,
-      speed: 0.5 + Math.random() * 0.8,
-      size: 18 + Math.random() * 14,
-      type: Math.floor(Math.random() * 3),
-      wiggle: Math.random() * Math.PI * 2
-    });
-  }
-
-  // ─── Seaweeds ────────────────────────────────────────────
-  const seaweeds = [];
-  function initSeaweeds() {
-    seaweeds.length = 0;
-    for (let i = 0; i < 7; i++) {
-      seaweeds.push({
-        x: Math.random() * (W - 40) + 20,
-        h: 30 + Math.random() * 50,
-        sway: Math.random() * Math.PI * 2,
-        segments: 3 + Math.floor(Math.random() * 3)
+  // ===== Clouds =====
+  let clouds = [];
+  function initClouds() {
+    clouds = [];
+    for (let i = 0; i < 5; i++) {
+      clouds.push({
+        x: Math.random() * 600,
+        y: 30 + Math.random() * 120,
+        w: 80 + Math.random() * 80,
+        speed: 0.3 + Math.random() * 0.4,
+        alpha: 0.7 + Math.random() * 0.3
       });
     }
   }
 
-  // ─── Crocodiles ──────────────────────────────────────────
-  const crocs = [];
-  function spawnCroc() {
-    const fromLeft = Math.random() < 0.5;
-    crocs.push({
-      x: fromLeft ? -80 : W + 80,
-      y: WATER_Y - 12 + Math.random() * 20,
-      dir: fromLeft ? 1 : -1,
-      speed: 0.6 + Math.random() * 0.5 + level * 0.15,
-      mouthOpen: 0,
-      mouthDir: 1,
-      snapCooldown: 0
-    });
+  // ===== Birds (background) =====
+  let bgBirds = [];
+  function initBgBirds() {
+    bgBirds = [];
+    for (let i = 0; i < 4; i++) {
+      bgBirds.push({
+        x: Math.random() * 600,
+        y: 40 + Math.random() * 140,
+        speed: 0.5 + Math.random() * 0.8,
+        phase: Math.random() * Math.PI * 2,
+        size: 6 + Math.random() * 6
+      });
+    }
   }
 
-  // ─── Bubbles ─────────────────────────────────────────────
-  const bubbles = [];
-  function spawnBubble() {
-    bubbles.push({
-      x: Math.random() * W,
-      y: H,
-      r: 2 + Math.random() * 4,
-      speed: 0.4 + Math.random() * 0.6
-    });
+  // ===== Rain =====
+  let rainDrops = [];
+  function initRain(count) {
+    rainDrops = [];
+    for (let i = 0; i < count; i++) {
+      rainDrops.push({
+        x: Math.random() * 600,
+        y: Math.random() * 700,
+        len: 8 + Math.random() * 12,
+        speed: 6 + Math.random() * 4
+      });
+    }
   }
 
-  // ─── Score Popups ────────────────────────────────────────
-  const popups = [];
-  function addPopup(x, y, text, color) {
-    popups.push({ x, y, text, color, life: 60 });
+  // ===== Waves =====
+  let waveOffset = 0;
+
+  // ===== Fish =====
+  let fishes = [];
+  const FISH_TYPES = [
+    { name:'金鱼',  color:'#ff6600', points: 1, size: 18 },
+    { name:'蓝鱼',  color:'#00aaff', points: 2, size: 20 },
+    { name:'绿鱼',  color:'#00cc44', points: 3, size: 16 },
+    { name:'彩鱼',  color:'#ff44cc', points: 5, size: 14 },
+    { name:'金鲳鱼',color:'#ffd700', points: 2, size: 22 },
+  ];
+
+  function spawnFish(cfg) {
+    fishes = [];
+    // Normal fish
+    for (let i = 0; i < cfg.fishCount; i++) {
+      const ft = FISH_TYPES[Math.floor(Math.random() * FISH_TYPES.length)];
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      fishes.push({
+        x: Math.random() * 560 + 20,
+        y: 440 + Math.random() * 200,
+        vx: (0.5 + Math.random() * cfg.fishSpeed) * dir,
+        vy: (Math.random() - 0.5) * 0.6,
+        size: ft.size,
+        color: ft.color,
+        points: ft.points,
+        shark: false,
+        phase: Math.random() * Math.PI * 2,
+        alive: true
+      });
+    }
+    // Sharks
+    for (let i = 0; i < cfg.sharkCount; i++) {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      fishes.push({
+        x: Math.random() * 560 + 20,
+        y: 450 + Math.random() * 180,
+        vx: (1 + Math.random() * cfg.fishSpeed * 0.8) * dir,
+        vy: (Math.random() - 0.5) * 0.4,
+        size: 30,
+        color: '#778899',
+        points: 0,
+        shark: true,
+        phase: Math.random() * Math.PI * 2,
+        alive: true
+      });
+    }
   }
 
-  // ─── Init / Reset ────────────────────────────────────────
-  function initGame() {
-    score = 0; lives = 3; level = 1; tick = 0;
-    eagle.x = W / 2; eagle.y = 120;
-    eagle.targetX = W / 2; eagle.targetY = 120;
-    eagle.vx = 0; eagle.vy = 0;
-    eagle.diving = false; eagle.returning = false;
-    eagle.inWater = false; eagle.invincible = 0; eagle.catchEffect = 0;
-    birds.length = 0;
-    fishes.length = 0;
-    crocs.length = 0;
-    bubbles.length = 0;
-    popups.length = 0;
-    initSeaweeds();
-    // spawn initial fish
-    for (let i = 0; i < 5; i++) spawnFish();
+  // ===== Sea horizon Y =====
+  function seaY() { return 380; }
+
+  // ===== Init Level =====
+  function initLevel(lv) {
+    level = lv;
+    const cfg = levelConfig[lv];
+    eagle.x = 280;
+    eagle.y = 200;
+    eagle.vx = 0;
+    eagle.vy = 0;
+    eagle.invincible = 0;
+    initClouds();
+    initBgBirds();
+    initRain(cfg.rainCount);
+    spawnFish(cfg);
+    waveOffset = 0;
+    hudLevel.textContent = `第${lv}关`;
     updateHUD();
   }
 
   function updateHUD() {
-    livesVal.textContent = lives;
-    scoreVal.textContent = score;
-    levelVal.textContent = level;
+    hudScore.textContent = `分数: ${score}`;
+    hudLives.textContent = '❤️'.repeat(Math.max(0, lives));
   }
 
-  // ─── Mouse / Touch Control ───────────────────────────────
-  function getRelPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    if (e.touches) {
-      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    }
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  }
-
-  canvas.addEventListener('mousemove', function(e) {
-    if (!gameRunning) return;
-    const p = getRelPos(e);
-    eagle.targetX = p.x;
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.targetY = Math.min(p.y, WATER_Y - 30);
-    }
-  });
-
-  canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    if (!gameRunning) return;
-    const p = getRelPos(e);
-    eagle.targetX = p.x;
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.targetY = Math.min(p.y, WATER_Y - 30);
-    }
-  }, { passive: false });
-
-  // Click/tap to dive
-  canvas.addEventListener('click', function(e) {
-    if (!gameRunning) return;
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.diving = true;
-      eagle.diveStartY = eagle.y;
-      eagle.vy = 8;
-    }
-  });
-
-  canvas.addEventListener('touchend', function(e) {
-    if (!gameRunning) return;
-    if (!eagle.diving && !eagle.returning && !eagle.inWater) {
-      eagle.diving = true;
-      eagle.diveStartY = eagle.y;
-      eagle.vy = 8;
-    }
-  });
-
-  // ─── Button handlers ─────────────────────────────────────
-  document.getElementById('startBtn').addEventListener('click', function(e) {
-    e.stopPropagation();
-    startGame();
-  });
-
-  document.getElementById('restartBtn').addEventListener('click', function(e) {
-    e.stopPropagation();
-    restartGame();
-  });
-
+  // ===== Start Game =====
   function startGame() {
-    // Hide start screen, show canvas and HUD
+    score = 0;
+    lives = 3;
+    level = 1;
     startScreen.style.display = 'none';
+    overlayScreen.style.display = 'none';
     canvas.style.display = 'block';
     hud.style.display = 'flex';
-    gameOverScreen.style.display = 'none';
-
-    initGame();
+    initLevel(1);
     gameRunning = true;
-
-    // Cancel any existing loop before starting a new one
-    if (animFrame) cancelAnimationFrame(animFrame);
+    if (animId) cancelAnimationFrame(animId);
     gameLoop();
   }
 
-  function restartGame() {
-    gameOverScreen.style.display = 'none';
-    canvas.style.display = 'block';
-    hud.style.display = 'flex';
-
-    initGame();
-    gameRunning = true;
-
-    if (animFrame) cancelAnimationFrame(animFrame);
-    gameLoop();
-  }
-
-  function endGame() {
+  // ===== Show Overlay =====
+  function showOverlay(title, msg, btnText) {
     gameRunning = false;
-    if (animFrame) cancelAnimationFrame(animFrame);
-    if (score > highScore) highScore = score;
-    finalScore.textContent = score;
-    highScoreVal.textContent = highScore;
-    gameOverScreen.style.display = 'flex';
+    overlayTitle.textContent = title;
+    overlayMsg.textContent = msg;
+    overlayBtn.textContent = btnText;
+    overlayScreen.style.display = 'flex';
   }
 
-  // ─── Drawing Helpers ─────────────────────────────────────
-  function drawCloud(x, y, w, h) {
-    ctx.fillStyle = 'rgba(255,255,255,0.88)';
-    ctx.beginPath();
-    ctx.ellipse(x, y, w * 0.45, h * 0.5, 0, 0, Math.PI * 2);
-    ctx.ellipse(x - w * 0.25, y + h * 0.1, w * 0.28, h * 0.38, 0, 0, Math.PI * 2);
-    ctx.ellipse(x + w * 0.25, y + h * 0.1, w * 0.28, h * 0.38, 0, 0, Math.PI * 2);
-    ctx.fill();
+  // ===== Go to Menu =====
+  function goMenu() {
+    gameRunning = false;
+    if (animId) cancelAnimationFrame(animId);
+    overlayScreen.style.display = 'none';
+    canvas.style.display = 'none';
+    hud.style.display = 'none';
+    startScreen.style.display = 'flex';
   }
 
-  function drawBird(x, y, dir, wingFrame) {
+  // ===== Draw Cloud =====
+  function drawCloud(c) {
     ctx.save();
-    ctx.translate(x, y);
-    if (dir < 0) ctx.scale(-1, 1);
-    ctx.fillStyle = '#555';
+    ctx.globalAlpha = c.alpha;
+    ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    const wf = Math.sin(wingFrame * 0.3) * 6;
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-8, -2);
-    ctx.quadraticCurveTo(-14, -8 + wf, -18, -2 + wf);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(2, -2);
-    ctx.quadraticCurveTo(8, -8 + wf, 12, -2 + wf);
-    ctx.stroke();
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(11, -2, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#f5a623';
-    ctx.beginPath();
-    ctx.moveTo(15, -1);
-    ctx.lineTo(19, -2);
-    ctx.lineTo(15, 0);
+    ctx.arc(c.x, c.y, c.w * 0.3, 0, Math.PI * 2);
+    ctx.arc(c.x + c.w * 0.25, c.y - c.w * 0.1, c.w * 0.22, 0, Math.PI * 2);
+    ctx.arc(c.x + c.w * 0.5, c.y, c.w * 0.28, 0, Math.PI * 2);
+    ctx.arc(c.x + c.w * 0.15, c.y + c.w * 0.08, c.w * 0.22, 0, Math.PI * 2);
+    ctx.arc(c.x + c.w * 0.38, c.y + c.w * 0.08, c.w * 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
-  function drawEagle(x, y, diving, inWater, inv) {
-    if (inv > 0 && Math.floor(inv / 5) % 2 === 0) return;
+  // ===== Draw Background Bird =====
+  function drawBgBird(b) {
     ctx.save();
-    ctx.translate(x, y);
-    if (diving || inWater) ctx.rotate(Math.PI / 2);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 1.5;
+    const flap = Math.sin(b.phase) * b.size * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(b.x - b.size, b.y + flap);
+    ctx.quadraticCurveTo(b.x - b.size * 0.5, b.y - flap, b.x, b.y);
+    ctx.quadraticCurveTo(b.x + b.size * 0.5, b.y - flap, b.x + b.size, b.y + flap);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ===== Draw Eagle =====
+  function drawEagle() {
+    const e = eagle;
+    if (e.invincible > 0 && Math.floor(e.invincible / 5) % 2 === 0) return; // blink
+
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    if (e.vx < 0) ctx.scale(-1, 1);
+
+    const flap = Math.sin(e.wingPhase) * 12;
+
+    // Body
     ctx.fillStyle = '#8B4513';
     ctx.beginPath();
     ctx.ellipse(0, 0, 20, 10, 0, 0, Math.PI * 2);
     ctx.fill();
-    const wSpread = (diving || inWater) ? 18 : 22;
-    ctx.fillStyle = '#6d2f00';
-    ctx.beginPath();
-    ctx.moveTo(-8, -2);
-    ctx.bezierCurveTo(-20, -wSpread, -32, -wSpread + 5, -26, -2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(-8, 2);
-    ctx.bezierCurveTo(-20, wSpread, -32, wSpread - 5, -26, 2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#5a2000';
-    ctx.beginPath();
-    ctx.moveTo(18, -5);
-    ctx.lineTo(28, -8);
-    ctx.lineTo(27, 0);
-    ctx.lineTo(28, 8);
-    ctx.lineTo(18, 5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#f0f0f0';
-    ctx.beginPath();
-    ctx.ellipse(-16, 0, 10, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(-19, -2, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(-18.5, -2.5, 0.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#f5c518';
-    ctx.beginPath();
-    ctx.moveTo(-24, -1);
-    ctx.lineTo(-30, 1);
-    ctx.lineTo(-24, 3);
-    ctx.closePath();
-    ctx.fill();
-    if (diving || inWater) {
-      ctx.strokeStyle = '#333';
-      ctx.lineWidth = 2;
-      [-5, 0, 5].forEach(function(offset) {
-        ctx.beginPath();
-        ctx.moveTo(-16 + offset, 10);
-        ctx.lineTo(-16 + offset, 17);
-        ctx.stroke();
-      });
-    }
-    ctx.restore();
-  }
 
-  function drawFish(x, y, dir, size, type, wiggle) {
-    const colors = [
-      ['#ff8c00','#ff4500'],
-      ['#ffd700','#ffa500'],
-      ['#00bcd4','#0097a7']
-    ];
-    ctx.save();
-    ctx.translate(x, y);
-    if (dir > 0) ctx.scale(-1, 1);
-    const wag = Math.sin(wiggle) * 4;
-    ctx.fillStyle = colors[type][1];
-    ctx.beginPath();
-    ctx.moveTo(size * 0.6, wag);
-    ctx.lineTo(size * 1.2, -size * 0.45 + wag);
-    ctx.lineTo(size * 1.2, size * 0.45 + wag);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = colors[type][0];
-    ctx.beginPath();
-    ctx.ellipse(0, 0, size * 0.55, size * 0.3, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // Head
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(-size * 0.28, -size * 0.05, size * 0.1, 0, Math.PI * 2);
+    ctx.arc(18, -6, 8, 0, Math.PI * 2);
     ctx.fill();
+
+    // Eye
     ctx.fillStyle = '#222';
     ctx.beginPath();
-    ctx.arc(-size * 0.3, -size * 0.05, size * 0.06, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = colors[type][1];
-    ctx.beginPath();
-    ctx.moveTo(-size * 0.1, -size * 0.25);
-    ctx.lineTo(size * 0.2, -size * 0.25);
-    ctx.lineTo(size * 0.15, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  function drawSeaweed(x, sway, segments, h) {
-    const baseY = H;
-    const segH = h / segments;
-    ctx.strokeStyle = '#2e7d32';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(x, baseY);
-    for (let i = 0; i < segments; i++) {
-      const cy = baseY - (i + 0.5) * segH;
-      const bx = x + Math.sin(sway + i * 1.2) * 10;
-      ctx.lineTo(bx, cy);
-    }
-    ctx.stroke();
-    ctx.fillStyle = '#388e3c';
-    for (let i = 0; i < segments; i++) {
-      const ly = baseY - i * segH - segH * 0.8;
-      const lx = x + Math.sin(sway + i * 1.2) * 10;
-      ctx.beginPath();
-      ctx.ellipse(lx + 7, ly, 7, 4, 0.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(lx - 7, ly - 4, 6, 3, -0.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  function drawCroc(x, y, dir, mouthOpen) {
-    ctx.save();
-    ctx.translate(x, y);
-    if (dir < 0) ctx.scale(-1, 1);
-    ctx.fillStyle = '#33691e';
-    ctx.beginPath();
-    ctx.ellipse(0, 2, 38, 12, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#558b2f';
-    for (let i = -20; i <= 20; i += 10) {
-      ctx.beginPath();
-      ctx.ellipse(i, -8, 5, 4, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = '#33691e';
-    ctx.beginPath();
-    ctx.moveTo(32, 0);
-    ctx.lineTo(52, -6);
-    ctx.lineTo(48, 6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#4caf50';
-    ctx.beginPath();
-    ctx.moveTo(-38, 2);
-    ctx.lineTo(-18, 2);
-    ctx.lineTo(-10, 14);
-    ctx.lineTo(-40, 10);
-    ctx.closePath();
-    ctx.fill();
-    ctx.save();
-    ctx.translate(-28, 0);
-    ctx.rotate(-mouthOpen * 0.4);
-    ctx.fillStyle = '#66bb6a';
-    ctx.beginPath();
-    ctx.moveTo(-10, 0);
-    ctx.lineTo(10, 0);
-    ctx.lineTo(2, -12);
-    ctx.lineTo(-12, -10);
-    ctx.closePath();
+    ctx.arc(21, -8, 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#fff';
-    for (let t = -8; t <= 8; t += 5) {
-      ctx.beginPath();
-      ctx.moveTo(t, 0);
-      ctx.lineTo(t + 2, -5);
-      ctx.lineTo(t + 4, 0);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-    ctx.fillStyle = '#ffeb3b';
     ctx.beginPath();
-    ctx.ellipse(-15, -10, 6, 5, 0, 0, Math.PI * 2);
+    ctx.arc(22, -8.5, 0.7, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#1a237e';
+
+    // Beak
+    ctx.fillStyle = '#FFD700';
     ctx.beginPath();
-    ctx.arc(-15, -10, 3, 0, Math.PI * 2);
+    ctx.moveTo(25, -5);
+    ctx.lineTo(32, -4);
+    ctx.lineTo(25, -2);
     ctx.fill();
+
+    // Wings
+    ctx.fillStyle = '#5C3310';
+    // Left wing (upper)
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.lineTo(-26, -10 + flap);
+    ctx.lineTo(-20, 4);
+    ctx.lineTo(0, 5);
+    ctx.fill();
+    // Right wing hint
+    ctx.beginPath();
+    ctx.moveTo(5, -5);
+    ctx.lineTo(-10, -12 + flap);
+    ctx.lineTo(-5, 2);
+    ctx.closePath();
+    ctx.fillStyle = '#7a4520';
+    ctx.fill();
+
+    // Tail
+    ctx.fillStyle = '#8B4513';
+    ctx.beginPath();
+    ctx.moveTo(-18, 2);
+    ctx.lineTo(-30, 8);
+    ctx.lineTo(-24, 0);
+    ctx.fill();
+
+    // Talons
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(5, 8);
+    ctx.lineTo(10, 18); ctx.moveTo(10,18); ctx.lineTo(7, 20);
+    ctx.moveTo(10, 18); ctx.lineTo(13, 20);
+    ctx.moveTo(10, 18); ctx.lineTo(12, 17);
+    ctx.stroke();
+
     ctx.restore();
   }
 
-  // ─── Draw Background ─────────────────────────────────────
-  function drawBackground(t) {
-    // Sky
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, WATER_Y);
-    skyGrad.addColorStop(0, '#63b3ed');
-    skyGrad.addColorStop(1, '#90cdf4');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, W, WATER_Y);
-
-    // Sun
+  // ===== Draw Fish =====
+  function drawFish(f) {
+    if (!f.alive) return;
     ctx.save();
-    ctx.shadowColor = 'rgba(255,220,50,0.6)';
-    ctx.shadowBlur = 30;
-    ctx.fillStyle = '#ffe066';
-    ctx.beginPath();
-    ctx.arc(W - 60, 50, 26, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.translate(f.x, f.y);
+    if (f.vx < 0) ctx.scale(-1, 1);
+
+    if (f.shark) {
+      // Shark body
+      ctx.fillStyle = '#778899';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, f.size, f.size * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Dorsal fin
+      ctx.fillStyle = '#5a6a7a';
+      ctx.beginPath();
+      ctx.moveTo(-5, -f.size * 0.45);
+      ctx.lineTo(5, -f.size * 0.9);
+      ctx.lineTo(15, -f.size * 0.45);
+      ctx.fill();
+      // Tail
+      ctx.fillStyle = '#5a6a7a';
+      ctx.beginPath();
+      ctx.moveTo(-f.size, 0);
+      ctx.lineTo(-f.size - 12, -10);
+      ctx.lineTo(-f.size - 12, 10);
+      ctx.fill();
+      // Eye
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(f.size * 0.5, -4, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Teeth
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.moveTo(f.size * 0.6, 3);
+      ctx.lineTo(f.size * 0.7, 8);
+      ctx.lineTo(f.size * 0.8, 3);
+      ctx.fill();
+    } else {
+      // Normal fish
+      ctx.fillStyle = f.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, f.size, f.size * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Tail
+      ctx.beginPath();
+      ctx.moveTo(-f.size, 0);
+      ctx.lineTo(-f.size - 10, -7);
+      ctx.lineTo(-f.size - 10, 7);
+      ctx.fill();
+      // Fin
+      ctx.fillStyle = f.color + 'bb';
+      ctx.beginPath();
+      ctx.moveTo(-4, -f.size * 0.5);
+      ctx.lineTo(4, -f.size * 0.5 - 6);
+      ctx.lineTo(8, -f.size * 0.5);
+      ctx.fill();
+      // Eye
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(f.size * 0.55, -3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(f.size * 0.6, -3.5, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Scales pattern
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      for (let s = -1; s <= 1; s++) {
+        ctx.beginPath();
+        ctx.arc(s * 6, 0, 5, Math.PI * 0.8, Math.PI * 2.2);
+        ctx.stroke();
+      }
+    }
     ctx.restore();
+  }
+
+  // ===== Draw Sea =====
+  function drawSea(cfg) {
+    const sy = seaY();
+    // Sea gradient
+    const grad = ctx.createLinearGradient(0, sy, 0, 700);
+    grad.addColorStop(0, '#0077b6');
+    grad.addColorStop(1, '#023e6e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, sy, 600, 700 - sy);
+
+    // Wave surface
+    ctx.fillStyle = '#00b4d8';
+    ctx.beginPath();
+    ctx.moveTo(0, sy);
+    for (let x = 0; x <= 600; x += 4) {
+      const y = sy + Math.sin((x * 0.02) + waveOffset) * cfg.waveAmp
+                   + Math.sin((x * 0.035) + waveOffset * 1.3) * (cfg.waveAmp * 0.5);
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(600, 700);
+    ctx.lineTo(0, 700);
+    ctx.closePath();
+    ctx.fill();
+
+    // Wave highlights
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    for (let w = 0; w < 3; w++) {
+      ctx.beginPath();
+      const off = waveOffset + w * 1.2;
+      for (let x = 0; x <= 600; x += 5) {
+        const y = sy + 8 + w * 12
+                     + Math.sin((x * 0.025) + off) * cfg.waveAmp * 0.6;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // ===== Draw Sky =====
+  function drawSky() {
+    const sy = seaY();
+    const grad = ctx.createLinearGradient(0, 0, 0, sy);
+    const cfg = levelConfig[level];
+    if (cfg.rainCount > 80) {
+      grad.addColorStop(0, '#4a5568');
+      grad.addColorStop(1, '#718096');
+    } else if (cfg.rainCount > 0) {
+      grad.addColorStop(0, '#6b8fb5');
+      grad.addColorStop(1, '#9fc6e0');
+    } else {
+      grad.addColorStop(0, '#48cae4');
+      grad.addColorStop(1, '#90e0ef');
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 600, sy);
+  }
+
+  // ===== Draw Rain =====
+  function drawRain(cfg) {
+    if (!rainDrops.length) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(180,210,255,0.6)';
+    ctx.lineWidth = 1;
+    const angle = Math.atan2(cfg.windY, 1) + 0.2;
+    for (const r of rainDrops) {
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.lineTo(r.x + Math.sin(angle) * r.len * 0.8, r.y + r.len);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ===== Draw Wind Lines =====
+  function drawWind(cfg) {
+    if (cfg.windX < 0.3) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const y = 50 + i * 40 + Math.random() * 10;
+      const len = 30 + Math.random() * 60;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * 600, y);
+      ctx.lineTo(Math.random() * 600 + len, y + 3);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ===== Score Popups =====
+  let popups = [];
+  function addPopup(x, y, text, color) {
+    popups.push({ x, y, text, color, life: 60, vy: -1.5 });
+  }
+  function drawPopups() {
+    for (const p of popups) {
+      ctx.save();
+      ctx.globalAlpha = p.life / 60;
+      ctx.fillStyle = p.color || '#FFD700';
+      ctx.font = 'bold 20px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.restore();
+      p.y += p.vy;
+      p.life--;
+    }
+    popups = popups.filter(p => p.life > 0);
+  }
+
+  // ===== Particle Effects =====
+  let particles = [];
+  function spawnParticles(x, y, color) {
+    for (let i = 0; i < 10; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 5,
+        vy: (Math.random() - 0.5) * 5,
+        life: 30,
+        color
+      });
+    }
+  }
+  function drawParticles() {
+    for (const p of particles) {
+      ctx.save();
+      ctx.globalAlpha = p.life / 30;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life--;
+    }
+    particles = particles.filter(p => p.life > 0);
+  }
+
+  // ===== Update Logic =====
+  function update() {
+    if (!gameRunning) return;
+    const cfg = levelConfig[level];
+
+    // Wind effect on eagle
+    eagle.vx += cfg.windX * 0.05;
+    eagle.vy += cfg.windY * 0.05;
+
+    // Eagle controls
+    if (keys['ArrowLeft']  || keys['a'] || keys['A'])  eagle.vx -= eagle.speed * 0.2;
+    if (keys['ArrowRight'] || keys['d'] || keys['D'])  eagle.vx += eagle.speed * 0.2;
+    if (keys['ArrowUp']    || keys['w'] || keys['W'])  eagle.vy -= eagle.speed * 0.2;
+    if (keys['ArrowDown']  || keys['s'] || keys['S'])  eagle.vy += eagle.speed * 0.2;
+
+    // Damping
+    eagle.vx *= 0.85;
+    eagle.vy *= 0.85;
+
+    // Clamp speed
+    const spd = Math.sqrt(eagle.vx ** 2 + eagle.vy ** 2);
+    if (spd > eagle.speed) {
+      eagle.vx = (eagle.vx / spd) * eagle.speed;
+      eagle.vy = (eagle.vy / spd) * eagle.speed;
+    }
+
+    eagle.x += eagle.vx;
+    eagle.y += eagle.vy;
+    eagle.wingPhase += 0.18;
+
+    // Eagle bounds — can go into sea slightly for catching fish
+    eagle.x = Math.max(26, Math.min(574, eagle.x));
+    eagle.y = Math.max(30, Math.min(550, eagle.y));
+
+    // Invincibility countdown
+    if (eagle.invincible > 0) eagle.invincible--;
+
+    // Move clouds
+    for (const c of clouds) {
+      c.x += c.speed + cfg.windX * 1.5;
+      if (c.x > 700) c.x = -100;
+    }
+
+    // Move bg birds
+    for (const b of bgBirds) {
+      b.x += b.speed + cfg.windX;
+      b.phase += 0.12;
+      if (b.x > 660) b.x = -40;
+    }
+
+    // Move rain
+    for (const r of rainDrops) {
+      r.x += cfg.windX * 3;
+      r.y += r.speed;
+      if (r.y > 700) { r.y = -10; r.x = Math.random() * 600; }
+      if (r.x > 600) r.x -= 600;
+    }
+
+    // Move fish
+    for (const f of fishes) {
+      if (!f.alive) continue;
+      f.phase += 0.05;
+      f.x += f.vx;
+      f.y += f.vy + Math.sin(f.phase) * 0.4;
+
+      // Sea bounds
+      if (f.y < seaY() + 15) { f.y = seaY() + 15; f.vy = Math.abs(f.vy) + 0.1; }
+      if (f.y > 680) { f.y = 680; f.vy = -Math.abs(f.vy) - 0.1; }
+      if (f.x < 10)  { f.x = 10;  f.vx = Math.abs(f.vx); }
+      if (f.x > 590) { f.x = 590; f.vx = -Math.abs(f.vx); }
+    }
+
+    // Wave
+    waveOffset += cfg.waveSpeed;
+
+    // Collision detection — eagle vs fish
+    if (eagle.invincible === 0) {
+      for (const f of fishes) {
+        if (!f.alive) continue;
+        const dx = eagle.x - f.x;
+        const dy = eagle.y - f.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const hitR = eagle.w * 0.38 + f.size * 0.7;
+
+        if (dist < hitR) {
+          if (f.shark) {
+            // Hit shark!
+            lives--;
+            eagle.invincible = 90;
+            spawnParticles(eagle.x, eagle.y, '#ff4444');
+            addPopup(eagle.x, eagle.y - 30, '💥 被鲨鱼咬了！', '#ff4444');
+            updateHUD();
+            if (lives <= 0) {
+              setTimeout(() => showOverlay('💀 游戏结束', `最终得分: ${score}`, '再来一次'), 400);
+            }
+          } else {
+            // Caught fish!
+            f.alive = false;
+            score += f.points;
+            spawnParticles(f.x, f.y, f.color);
+            addPopup(f.x, f.y - 20, `+${f.points}`, '#FFD700');
+            updateHUD();
+          }
+        }
+      }
+    }
+
+    // Check level complete
+    const cfg2 = levelConfig[level];
+    if (score >= cfg2.targetScore) {
+      if (level < 3) {
+        gameRunning = false;
+        setTimeout(() => {
+          showOverlay(`🎉 第${level}关通过！`, `得分: ${score} / 目标: ${cfg2.targetScore}\n继续挑战第${level+1}关！`, `第${level+1}关`);
+        }, 300);
+      } else {
+        gameRunning = false;
+        setTimeout(() => showOverlay('🏆 你赢了！', `全部三关通过！最终得分: ${score}`, '再玩一次'), 300);
+      }
+    }
+  }
+
+  // ===== Draw Everything =====
+  function draw() {
+    const cfg = levelConfig[level];
+    ctx.clearRect(0, 0, 600, 700);
+
+    drawSky();
+    drawWind(cfg);
 
     // Clouds
-    clouds.forEach(function(c) { drawCloud(c.x, c.y, c.w, c.h); });
+    for (const c of clouds) drawCloud(c);
+    // Bg birds
+    for (const b of bgBirds) drawBgBird(b);
+    // Rain
+    drawRain(cfg);
+    // Sea
+    drawSea(cfg);
+    // Fish (only below sea line - they swim in water)
+    for (const f of fishes) drawFish(f);
+    // Eagle
+    drawEagle();
+    // Particles & Popups
+    drawParticles();
+    drawPopups();
 
-    // Water body
-    const waterGrad = ctx.createLinearGradient(
+    // Level target indicator
+    const cfg3 = levelConfig[level];
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.roundRect(200, 668, 200, 24, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '13px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`目标分数: ${score} / ${cfg3.targetScore}`, 300, 685);
+    ctx.restore();
+  }
+
+  // ===== Game Loop =====
+  function gameLoop() {
+    update();
+    draw();
+    animId = requestAnimationFrame(gameLoop);
+  }
+
+  // ===== Touch Controls =====
+  let touchStart = null;
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: false });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!touchStart) return;
+    const dx = e.touches[0].clientX - touchStart.x;
+    const dy = e.touches[0].clientY - touchStart.y;
+    eagle.vx += dx * 0.04;
+    eagle.vy += dy * 0.04;
+    touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, { passive: false });
+  canvas.addEventListener('touchend', () => { touchStart = null; });
+
+  // ===== Button Handlers =====
+  document.getElementById('startBtn').addEventListener('click', function() {
+    startGame();
+  });
+
+  overlayBtn.addEventListener('click', function() {
+    overlayScreen.style.display = 'none';
+    const btnText = overlayBtn.textContent;
+    if (btnText === '再来一次' || btnText === '再玩一次') {
+      startGame();
+    } else if (btnText.includes('关')) {
+      // Next level
+      level++;
+      initLevel(level);
+      gameRunning = true;
+      gameLoop();
+    }
+  });
+
+  menuBtn.addEventListener('click', function() {
+    goMenu();
+  });
+
+  // BUTTON CHECKLIST: #startBtn ✓  #overlayBtn ✓  #menuBtn ✓
+
+});
+
+  /* auto-injected handler for #overlayBtn */
+  var _btn_overlayBtn = document.getElementById('overlayBtn');
+  if (_btn_overlayBtn) _btn_overlayBtn.addEventListener('click', function() {
+    var ss = document.getElementById('startScreen') || document.querySelector('.start-screen, .menu, #menu');
+    var cv = document.querySelector('canvas');
+    if (ss) ss.style.display = 'none';
+    if (cv) cv.style.display = 'block';
+  });
+  /* auto-injected handler for #menuBtn */
+  var _btn_menuBtn = document.getElementById('menuBtn');
+  if (_btn_menuBtn) _btn_menuBtn.addEventListener('click', function() {
+    var ss = document.getElementById('startScreen') || document.querySelector('.start-screen, .menu, #menu');
+    var cv = document.querySelector('canvas');
+    if (ss) ss.style.display = 'none';
+    if (cv) cv.style.display = 'block';
+  });
+</script>
+</body>
+</html>
