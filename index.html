@@ -333,9 +333,9 @@
     <p>抓住合适的客户，签保险！</p>
     <div class="rules-box">
       <b>✅ 好客户 (+1分)：</b><br>
-      <span class="good">商人��、上班族📋、家庭👨‍👩‍👧、情侣💕</span><br><br>
+      <span class="good">商人💼、上班族📋、家庭👨‍👩‍👧、情侣💕</span><br><br>
       <b>❌ 错误目标 (−1分)：</b><br>
-      <span class="bad">小孩👦、游客📸、乞丐🧤</span><br><br>
+      <span class="bad">小孩🧸、游客🧳、乞丐🎒</span><br><br>
       🖱️ <b>点击人物</b>即可抓取！<br>
       🎯 达到 <b>5分</b> 即可过关！<br><br>
       🏆 第1关 → 大口吃汉堡 🍔<br>
@@ -434,9 +434,10 @@ document.addEventListener('DOMContentLoaded', function() {
     { type:'worker',   label:'上班族', emoji:'📋', good:true,  shirtColor:'#2980b9', pantColor:'#1a5276', skinColor:'#f0c27f', hatEmoji:null,  female:false },
     { type:'family',   label:'家庭',   emoji:'👨‍👩‍👧', good:true,  shirtColor:'#27ae60', pantColor:'#1e8449', skinColor:'#f5cba7', hatEmoji:null,  female:false },
     { type:'couple',   label:'情侣',   emoji:'💕', good:true,  shirtColor:'#8e44ad', pantColor:'#6c3483', skinColor:'#fad7a0', hatEmoji:null,  female:true  },
-    { type:'kid',      label:'小孩',   emoji:'🎒', good:false, shirtColor:'#e74c3c', pantColor:'#a93226', skinColor:'#f9e4b7', hatEmoji:'🧢',  female:false },
+    // bad targets — each has a special prop drawn on them
+    { type:'kid',      label:'小孩',   emoji:'🧸', good:false, shirtColor:'#e74c3c', pantColor:'#a93226', skinColor:'#f9e4b7', hatEmoji:'🧢',  female:false },
     { type:'tourist',  label:'游客',   emoji:'📸', good:false, shirtColor:'#e67e22', pantColor:'#ca6f1e', skinColor:'#fdebd0', hatEmoji:'👒',  female:false },
-    { type:'beggar',   label:'乞丐',   emoji:'🧤', good:false, shirtColor:'#7f8c8d', pantColor:'#515a5a', skinColor:'#d5b59e', hatEmoji:null,  female:false },
+    { type:'beggar',   label:'乞丐',   emoji:'🎒', good:false, shirtColor:'#7f8c8d', pantColor:'#515a5a', skinColor:'#d5b59e', hatEmoji:null,  female:false },
   ];
 
   // ── BUILDING DEFS ──
@@ -704,6 +705,158 @@ document.addEventListener('DOMContentLoaded', function() {
     ctx.arc(torsoW/2 + armSwing*0.6, shoulderY + armLen, 4, 0, Math.PI*2);
     ctx.fill();
 
+    // ── SPECIAL PROPS ──
+
+    // 🎒 乞丐背大包: draw a big lumpy backpack on their back
+    if (p.type === 'beggar') {
+      // backpack body — drawn behind torso (on the "back" side, i.e. negative x since facing right)
+      const bpX = -torsoW * 0.62;
+      const bpY = shoulderY + H * 0.03;
+      const bpW = torsoW * 0.72;
+      const bpH = H * 0.36;
+      // main sack — lumpy brown bag
+      ctx.fillStyle = '#6d4c20';
+      ctx.beginPath();
+      ctx.roundRect(bpX - bpW, bpY, bpW, bpH, 8);
+      ctx.fill();
+      // lumpy bumps on top of bag
+      ctx.fillStyle = '#8B6333';
+      ctx.beginPath();
+      ctx.arc(bpX - bpW * 0.75, bpY + 4, bpW * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bpX - bpW * 0.45, bpY + 2, bpW * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      // strap over shoulder
+      ctx.strokeStyle = '#5a3a10';
+      ctx.lineWidth = Math.max(2, H * 0.038);
+      ctx.beginPath();
+      ctx.moveTo(bpX - bpW * 0.5, bpY);
+      ctx.quadraticCurveTo(bpX * 0.2, shoulderY - headR * 0.3, torsoW * 0.1, shoulderY + H * 0.12);
+      ctx.stroke();
+      // small buckle detail
+      ctx.fillStyle = '#c8a840';
+      ctx.fillRect(bpX - bpW * 0.6, bpY + bpH * 0.45, bpW * 0.28, H * 0.045);
+    }
+
+    // 🧳 游客推拉杆箱: draw a rolling suitcase being dragged behind them
+    if (p.type === 'tourist') {
+      // The suitcase trails behind (negative x direction since character faces right)
+      const scaleOffX = -torsoW * 0.5 - H * 0.28; // behind the person
+      const scaleTopY = hipY - H * 0.05;           // starts near hip height
+      const scaleW    = H * 0.19;
+      const scaleH    = H * 0.28;
+
+      // handle rod (arm pulling it)
+      ctx.strokeStyle = '#888';
+      ctx.lineWidth   = Math.max(1.5, H * 0.025);
+      ctx.beginPath();
+      // from hand position to top of suitcase
+      ctx.moveTo(torsoW/2 + armSwing*0.6, shoulderY + armLen);
+      ctx.lineTo(scaleOffX + scaleW * 0.5, scaleTopY - H * 0.08);
+      ctx.stroke();
+
+      // suitcase body
+      ctx.fillStyle = '#e74c3c';
+      ctx.beginPath();
+      ctx.roundRect(scaleOffX, scaleTopY, scaleW, scaleH, 4);
+      ctx.fill();
+      // suitcase highlight stripe
+      ctx.fillStyle = '#f1948a';
+      ctx.fillRect(scaleOffX + scaleW * 0.12, scaleTopY + scaleH * 0.1, scaleW * 0.2, scaleH * 0.8);
+      // suitcase latch
+      ctx.fillStyle = '#888';
+      ctx.fillRect(scaleOffX + scaleW * 0.38, scaleTopY + scaleH * 0.42, scaleW * 0.24, scaleH * 0.16);
+      // extendable handle on top of suitcase
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth   = Math.max(1.5, H * 0.024);
+      ctx.beginPath();
+      ctx.moveTo(scaleOffX + scaleW * 0.25, scaleTopY);
+      ctx.lineTo(scaleOffX + scaleW * 0.25, scaleTopY - H * 0.1);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(scaleOffX + scaleW * 0.75, scaleTopY);
+      ctx.lineTo(scaleOffX + scaleW * 0.75, scaleTopY - H * 0.1);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(scaleOffX + scaleW * 0.25, scaleTopY - H * 0.1);
+      ctx.lineTo(scaleOffX + scaleW * 0.75, scaleTopY - H * 0.1);
+      ctx.stroke();
+      // wheels
+      ctx.fillStyle = '#333';
+      ctx.beginPath();
+      ctx.arc(scaleOffX + scaleW * 0.22, scaleTopY + scaleH + 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(scaleOffX + scaleW * 0.78, scaleTopY + scaleH + 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 🧸 小孩抱玩具熊: draw a teddy bear held in front arms
+    if (p.type === 'kid') {
+      // toy bear held at waist/chest level in front
+      const bearCX = torsoW * 0.55;              // in front (positive x = front when facing right)
+      const bearCY = shoulderY + armLen * 0.85;  // roughly at hand level
+      const bearR  = H * 0.095;
+
+      // bear body
+      ctx.fillStyle = '#c8922a';
+      ctx.beginPath();
+      ctx.ellipse(bearCX, bearCY + bearR * 0.6, bearR * 0.8, bearR, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // bear head
+      ctx.fillStyle = '#c8922a';
+      ctx.beginPath();
+      ctx.arc(bearCX, bearCY - bearR * 0.25, bearR * 0.72, 0, Math.PI * 2);
+      ctx.fill();
+      // bear ears
+      ctx.beginPath();
+      ctx.arc(bearCX - bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bearCX + bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      // inner ears
+      ctx.fillStyle = '#e8b85a';
+      ctx.beginPath();
+      ctx.arc(bearCX - bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bearCX + bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      // bear tummy patch
+      ctx.fillStyle = '#e8b85a';
+      ctx.beginPath();
+      ctx.ellipse(bearCX, bearCY + bearR * 0.5, bearR * 0.42, bearR * 0.52, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // bear face
+      ctx.fillStyle = '#5d3a1a';
+      // eyes
+      ctx.beginPath();
+      ctx.arc(bearCX - bearR * 0.28, bearCY - bearR * 0.3, bearR * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(bearCX + bearR * 0.28, bearCY - bearR * 0.3, bearR * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      // nose
+      ctx.beginPath();
+      ctx.arc(bearCX, bearCY - bearR * 0.08, bearR * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      // small smile
+      ctx.strokeStyle = '#5d3a1a';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(bearCX, bearCY - bearR * 0.02, bearR * 0.18, 0.15, Math.PI - 0.15);
+      ctx.stroke();
+      // kid's arm hugging the bear — redraw right arm curved around it
+      ctx.strokeStyle = p.shirtColor;
+      ctx.lineWidth = Math.max(2.5, H * 0.055);
+      ctx.beginPath();
+      ctx.moveTo(torsoW/2, shoulderY + 4);
+      ctx.quadraticCurveTo(torsoW/2 + bearR * 1.1, bearCY, bearCX - bearR * 0.6, bearCY + bearR * 0.4);
+      ctx.stroke();
+    }
+
     // ── neck ──
     ctx.strokeStyle = p.skinColor;
     ctx.lineWidth   = H * 0.06;
@@ -788,7 +941,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const localMX = facingRight ? mouseX - cx : -(mouseX - cx);
     const localMY = mouseY - feetY;
     const bodyTopY = shoulderY - headR*2;
-    const bodyH    = Math.abs(bodyTopY);
     const inX = Math.abs(localMX) < H * 0.32;
     const inY = localMY > bodyTopY - headR*0.5 && localMY < 5;
     if (inX && inY) {
@@ -859,20 +1011,13 @@ document.addEventListener('DOMContentLoaded', function() {
         score = Math.max(-99, score + pts);
         updateHUD();
         showTooltip(p, e.clientX, e.clientY, pts);
-        // flash effect
         p.flash     = 20;
         p.flashGood = p.good;
-        // exaggerated jump for good, stumble for bad
         if (p.good) {
-          p._jumpV = -6;
+          p._jumpV  = -6;
           p._jumped = true;
         }
-        // remove after flash
-        const pi = i;
-        setTimeout(() => {
-          if (people[pi]) people.splice(pi, 1);
-        }, 400);
-        people.splice(i, 1); // remove immediately
+        people.splice(i, 1);
         if (score >= 5) {
           running = false;
           clearInterval(timerID);
@@ -1048,17 +1193,16 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ── CUTSCENE (win level 1 or 2) ──
-  // We animate an "eating" progress bar, then auto-advance or skip
-  let cutsceneTimer = null;
+  let cutsceneTimer    = null;
   let cutsceneProgress = 0;
-  let cutsceneDuration = 3500; // ms
+  let cutsceneDuration = 3500;
   let cutsceneInterval = null;
   let cutsceneNextLevel = 1;
 
   const CUTSCENES = [
     {
       title: '🎉 第1关完成！大口吃汉堡！',
-      frames: ['🍔😐','🍔😮','😋🍔','😁🤤','🤤��','😆🍔'],
+      frames: ['🍔😐','🍔😮','😋🍔','😁🤤','🤤😆','😆🍔'],
       desc: '经纪人大口大口吃汉堡，嚼得满嘴油！',
       bg: 'rgba(255,200,0,0.85)',
     },
@@ -1079,11 +1223,9 @@ document.addEventListener('DOMContentLoaded', function() {
     cutsceneScreen.style.background = cs.bg;
     cutsceneScreen.style.display = 'flex';
 
-    // reset progress
     cutsceneProgress = 0;
     document.getElementById('cutsceneProgressFill').style.width = '0%';
 
-    // animate eating frames
     let frameIdx = 0;
     clearInterval(cutsceneInterval);
     clearTimeout(cutsceneTimer);
@@ -1096,7 +1238,6 @@ document.addEventListener('DOMContentLoaded', function() {
       anim.textContent = cs.frames[frameIdx];
     }, 280);
 
-    // progress bar
     const tickMs = 50;
     const totalTicks = cutsceneDuration / tickMs;
     let tick = 0;
@@ -1121,8 +1262,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ── TREASURE SCREEN (level 3 win) ──
-  let treasureAnimFrame = null;
-  let treasureParticles = [];
+  let treasureAnimFrame  = null;
+  let treasureParticles  = [];
 
   const tCanvas = document.getElementById('treasureCanvas');
   const tCtx    = tCanvas.getContext('2d');
@@ -1130,119 +1271,4 @@ document.addEventListener('DOMContentLoaded', function() {
   function showTreasure() {
     treasureScreen.style.display = 'flex';
     tCanvas.width  = window.innerWidth;
-    tCanvas.height = window.innerHeight;
-
-    // spawn particles
-    treasureParticles = [];
-    const emojis = ['💰','💎','🪙','👑','💍','🏆','✨','💵','🌟','🎊','🎉','💛'];
-    for (let i = 0; i < 80; i++) {
-      treasureParticles.push({
-        x:  Math.random() * tCanvas.width,
-        y:  Math.random() * tCanvas.height,
-        vx: (Math.random()-0.5)*4,
-        vy: (Math.random()-0.5)*4 - 2,
-        emoji: emojis[Math.floor(Math.random()*emojis.length)],
-        size: 24 + Math.random()*28,
-        rot: Math.random()*Math.PI*2,
-        rotV: (Math.random()-0.5)*0.12,
-      });
-    }
-    cancelAnimationFrame(treasureAnimFrame);
-    loopTreasure();
-  }
-
-  function loopTreasure() {
-    tCtx.clearRect(0, 0, tCanvas.width, tCanvas.height);
-    treasureParticles.forEach(p => {
-      p.x  += p.vx;
-      p.y  += p.vy;
-      p.rot += p.rotV;
-      p.vy += 0.04; // gravity
-      if (p.y > tCanvas.height + 40) { p.y = -40; p.x = Math.random()*tCanvas.width; p.vy = -3 - Math.random()*3; }
-      if (p.x < -40)  p.x = tCanvas.width + 40;
-      if (p.x > tCanvas.width + 40) p.x = -40;
-      tCtx.save();
-      tCtx.translate(p.x, p.y);
-      tCtx.rotate(p.rot);
-      tCtx.font = p.size + 'px Arial';
-      tCtx.textAlign = 'center';
-      tCtx.textBaseline = 'middle';
-      tCtx.fillText(p.emoji, 0, 0);
-      tCtx.restore();
-    });
-    treasureAnimFrame = requestAnimationFrame(loopTreasure);
-  }
-
-  // ── FAIL SCREEN ──
-  let failTimer    = null;
-  let failInterval = null;
-
-  const FAIL_FRAMES = ['🌿😐','🌿😮','😋🌿','🐑🌿','😆🌿','🤣🌿'];
-
-  function showFail() {
-    failScreen.style.display = 'flex';
-    document.getElementById('failProgressFill').style.width = '0%';
-
-    let frameIdx = 0;
-    const anim = document.getElementById('failAnim');
-    anim.textContent = FAIL_FRAMES[0];
-
-    clearInterval(failInterval);
-    clearInterval(failTimer);
-
-    failInterval = setInterval(function() {
-      frameIdx = (frameIdx + 1) % FAIL_FRAMES.length;
-      anim.textContent = FAIL_FRAMES[frameIdx];
-    }, 300);
-
-    const tickMs = 50;
-    const totalMs = 3500;
-    const totalTicks = totalMs / tickMs;
-    let tick = 0;
-    failTimer = setInterval(function() {
-      tick++;
-      const pct = Math.min(100, (tick / totalTicks) * 100);
-      document.getElementById('failProgressFill').style.width = pct + '%';
-      if (pct >= 100) {
-        clearInterval(failTimer);
-        clearInterval(failInterval);
-        // enable retry button after eating is done
-      }
-    }, tickMs);
-  }
-
-  // ── BUTTON HANDLERS ──
-
-  startBtn.addEventListener('click', function() {
-    level = 1;
-    startLevel();
-  });
-
-  cutsceneSkipBtn.addEventListener('click', function() {
-    advanceCutscene();
-  });
-
-  treasureNextBtn.addEventListener('click', function() {
-    cancelAnimationFrame(treasureAnimFrame);
-    treasureScreen.style.display = 'none';
-    // After level 3 win, go back to level 1 (loop)
-    level = 1;
-    startLevel();
-  });
-
-  failRetryBtn.addEventListener('click', function() {
-    clearInterval(failTimer);
-    clearInterval(failInterval);
-    failScreen.style.display = 'none';
-    startLevel();
-  });
-
-  // initial resize
-  resizeCanvas();
-
-  // BUTTON CHECKLIST: #startBtn ✓  #cutsceneSkipBtn ✓  #treasureNextBtn ✓  #failRetryBtn ✓
-
-}); // end DOMContentLoaded
-</script>
-</body>
-</html>
+    tCanvas.height = window.
