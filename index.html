@@ -1,1274 +1,899 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LA Life Insurance Agent 🎯</title>
+<title>保险经纪人的日子</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: 'Arial', sans-serif;
-    background: #87CEEB;
-    overflow: hidden;
-    width: 100vw;
-    height: 100vh;
-  }
-  #gameContainer {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-  }
+  body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Arial', sans-serif; }
+  #gameContainer { position: relative; width: 800px; height: 500px; }
+
+  /* Start screen overlay */
   #startScreen {
-    position: absolute;
-    z-index: 100;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: auto;
+    position: absolute; z-index: 100; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #87CEEB 0%, #FDB97D 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 12px; overflow: hidden;
   }
-  #startScreen h1 {
-    font-size: 2.2em;
-    color: #FFD700;
-    text-shadow: 3px 3px 6px #000;
-    margin-bottom: 6px;
-    text-align: center;
+  #startScreen h1 { font-size: 36px; color: #2c3e50; text-shadow: 2px 2px 0 #fff; margin-bottom: 8px; }
+  #startScreen .subtitle { font-size: 16px; color: #34495e; margin-bottom: 16px; }
+  .rulesBox {
+    background: rgba(255,255,255,0.85); border-radius: 12px; padding: 14px 20px;
+    margin-bottom: 18px; max-width: 480px; width: 90%; border: 2px solid #f39c12;
   }
-  #startScreen h2 {
-    font-size: 1.1em;
-    color: #aef;
-    margin-bottom: 10px;
-    text-align: center;
-  }
-  #startScreen p {
-    color: #fff;
-    font-size: 0.95em;
-    margin: 4px 20px;
-    text-align: center;
-    max-width: 420px;
-  }
-  .rules-box {
-    background: rgba(255,255,255,0.1);
-    border: 2px solid #FFD700;
-    border-radius: 12px;
-    padding: 14px 20px;
-    margin: 12px 20px;
-    max-width: 440px;
-    color: #fff;
-    font-size: 0.88em;
-    line-height: 1.75;
-  }
-  .rules-box span.good { color: #7FFF00; font-weight: bold; }
-  .rules-box span.bad  { color: #FF6B6B; font-weight: bold; }
+  .rulesBox h3 { color: #e74c3c; margin-bottom: 8px; font-size: 15px; }
+  .rulesBox .good { color: #27ae60; font-size: 13px; margin-bottom: 4px; }
+  .rulesBox .bad  { color: #e74c3c; font-size: 13px; margin-bottom: 4px; }
+  .rulesBox .note { color: #7f8c8d; font-size: 12px; margin-top: 6px; }
   #startBtn {
-    margin-top: 16px;
-    padding: 14px 44px;
-    font-size: 1.3em;
-    font-weight: bold;
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    border: none;
-    border-radius: 30px;
-    cursor: pointer;
-    color: #1a1a2e;
-    box-shadow: 0 6px 20px rgba(255,165,0,0.5);
-    transition: transform 0.15s;
+    background: linear-gradient(135deg, #f39c12, #e74c3c); color: white;
+    border: none; border-radius: 30px; padding: 14px 40px; font-size: 20px;
+    cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: transform 0.1s;
   }
-  #startBtn:hover { transform: scale(1.07); }
+  #startBtn:hover { transform: scale(1.05); }
 
-  #gameCanvas {
-    position: absolute;
-    z-index: 1;
-    top: 0; left: 0;
-    display: none;
-    cursor: none;
-  }
+  /* Canvas */
+  #gameCanvas { position: absolute; z-index: 1; display: none; border-radius: 12px; }
 
-  /* ── CUTSCENE SCREEN ── */
-  #cutsceneScreen {
-    position: absolute;
-    z-index: 200;
-    width: 100%;
-    height: 100%;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: auto;
-    background: rgba(0,0,0,0.7);
-  }
-  #cutsceneBox {
-    background: #fffbe6;
-    border-radius: 22px;
-    padding: 32px 40px;
-    text-align: center;
-    box-shadow: 0 10px 50px rgba(0,0,0,0.5);
-    max-width: 420px;
-    animation: popIn 0.5s ease;
-    position: relative;
-    overflow: hidden;
-  }
-  #cutsceneTitle {
-    font-size: 1.7em;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 10px;
-  }
-  #cutsceneAnim {
-    font-size: 4em;
-    margin: 10px 0;
-    display: block;
-    animation: bounce 0.4s infinite alternate;
-  }
-  @keyframes bounce {
-    from { transform: scale(1); }
-    to   { transform: scale(1.15) rotate(5deg); }
-  }
-  #cutsceneDesc {
-    font-size: 1em;
-    color: #555;
-    margin-bottom: 16px;
-    line-height: 1.6;
-  }
-  #cutsceneProgressBar {
-    width: 100%;
-    height: 18px;
-    background: #eee;
-    border-radius: 9px;
-    overflow: hidden;
-    margin-bottom: 14px;
-  }
-  #cutsceneProgressFill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #FFD700, #FF6600);
-    border-radius: 9px;
-    transition: width 0.08s linear;
-  }
-  #cutsceneSkipBtn {
-    padding: 10px 30px;
-    font-size: 1em;
-    font-weight: bold;
-    background: linear-gradient(135deg, #4CAF50, #2e7d32);
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(76,175,80,0.4);
-    transition: transform 0.15s;
-    pointer-events: auto;
-  }
-  #cutsceneSkipBtn:hover { transform: scale(1.07); }
-
-  /* ── TREASURE SCREEN ── */
-  #treasureScreen {
-    position: absolute;
-    z-index: 210;
-    width: 100%;
-    height: 100%;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: auto;
-    background: radial-gradient(ellipse at center, #ffe066 0%, #ff9900 60%, #cc5500 100%);
-    overflow: hidden;
-  }
-  #treasureTitle {
-    font-size: 3em;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 3px 3px 8px #a00;
-    margin-bottom: 20px;
-    text-align: center;
-    z-index: 5;
-    animation: shake 0.3s infinite alternate;
-  }
-  @keyframes shake {
-    from { transform: rotate(-2deg) scale(1.0); }
-    to   { transform: rotate(2deg) scale(1.05); }
-  }
-  #treasureEmojis {
-    font-size: 2.5em;
-    z-index: 5;
-    text-align: center;
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
-  #treasureNextBtn {
-    padding: 14px 44px;
-    font-size: 1.2em;
-    font-weight: bold;
-    background: linear-gradient(135deg, #fff, #ffe066);
-    color: #c00;
-    border: none;
-    border-radius: 28px;
-    cursor: pointer;
-    z-index: 5;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-    transition: transform 0.15s;
-    pointer-events: auto;
-  }
-  #treasureNextBtn:hover { transform: scale(1.07); }
-  #treasureCanvas {
-    position: absolute;
-    top: 0; left: 0;
-    z-index: 2;
-    pointer-events: none;
-  }
-
-  /* ── FAIL SCREEN ── */
-  #failScreen {
-    position: absolute;
-    z-index: 200;
-    width: 100%;
-    height: 100%;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: auto;
-    background: rgba(0,0,0,0.6);
-  }
-  #failBox {
-    background: #fff;
-    border-radius: 20px;
-    padding: 30px 40px;
-    text-align: center;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    max-width: 360px;
-    animation: popIn 0.5s ease;
-  }
-  #failAnim { font-size: 3.5em; display: block; margin-bottom: 8px; animation: bounce 0.5s infinite alternate; }
-  #failTitle { font-size: 1.7em; font-weight: bold; color: #c62828; margin-bottom: 8px; }
-  #failDesc { font-size: 0.95em; color: #555; margin-bottom: 12px; }
-  #failProgressBar {
-    width: 100%;
-    height: 16px;
-    background: #eee;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 14px;
-  }
-  #failProgressFill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #7ec850, #2e7d32);
-    border-radius: 8px;
-    transition: width 0.08s linear;
-  }
-  #failRetryBtn {
-    padding: 11px 34px;
-    font-size: 1em;
-    font-weight: bold;
-    background: linear-gradient(135deg, #e53935, #b71c1c);
-    color: #fff;
-    border: none;
-    border-radius: 22px;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(229,57,53,0.5);
-    transition: transform 0.15s;
-    pointer-events: auto;
-  }
-  #failRetryBtn:hover { transform: scale(1.07); }
-
-  @keyframes popIn {
-    0%   { transform: scale(0.3); opacity: 0; }
-    80%  { transform: scale(1.05); }
-    100% { transform: scale(1); opacity: 1; }
-  }
-
-  /* ── HUD ── */
+  /* HUD */
   #hud {
-    position: absolute;
-    z-index: 50;
-    top: 0; left: 0; right: 0;
-    display: none;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    padding: 8px 18px;
-    font-size: 0.95em;
-    justify-content: space-between;
-    align-items: center;
+    position: absolute; z-index: 50; top: 8px; left: 0; width: 100%;
+    display: none; justify-content: space-around; align-items: center;
     pointer-events: none;
   }
-  #hud span { font-weight: bold; }
-  #hud .score-good { color: #7FFF00; }
-  #hud .score-bad  { color: #FF6B6B; }
+  .hudBox {
+    background: rgba(0,0,0,0.55); color: #fff; border-radius: 8px;
+    padding: 5px 14px; font-size: 15px; font-weight: bold;
+  }
+  .hudBox span { color: #FFD700; }
 
-  /* ── TOOLTIP ── */
+  /* Overlay screens */
+  .overlayScreen {
+    position: absolute; z-index: 200; width: 100%; height: 100%;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 12px;
+  }
+  #cutsceneScreen { background: linear-gradient(135deg, #6c5ce7, #fd79a8); }
+  #failScreen     { background: linear-gradient(135deg, #636e72, #2d3436); }
+  #treasureScreen { background: linear-gradient(135deg, #f9ca24, #f0932b); }
+
+  .overlayScreen h2 { color: white; font-size: 30px; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); }
+  .overlayScreen p  { color: rgba(255,255,255,0.9); font-size: 16px; margin-bottom: 20px; text-align: center; padding: 0 20px; }
+  .bigEmoji { font-size: 80px; margin-bottom: 10px; animation: bounce 0.6s infinite alternate; }
+  @keyframes bounce { from { transform: translateY(0) scale(1); } to { transform: translateY(-15px) scale(1.1); } }
+
+  .progressBarWrap { width: 300px; height: 20px; background: rgba(255,255,255,0.3); border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+  .progressBarFill { height: 100%; background: #fff; border-radius: 10px; transition: width 0.05s linear; }
+
+  .overlayBtn {
+    background: rgba(255,255,255,0.25); color: white; border: 2px solid white;
+    border-radius: 25px; padding: 10px 28px; font-size: 16px; cursor: pointer; transition: background 0.2s;
+  }
+  .overlayBtn:hover { background: rgba(255,255,255,0.45); }
+
+  /* Tooltip */
   #tooltip {
-    position: absolute;
-    z-index: 60;
-    background: rgba(0,0,0,0.78);
-    color: #fff;
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 0.82em;
-    pointer-events: none;
-    display: none;
-    white-space: nowrap;
+    position: absolute; z-index: 300; background: rgba(0,0,0,0.75); color: #fff;
+    border-radius: 6px; padding: 4px 10px; font-size: 13px; pointer-events: none;
+    display: none; white-space: nowrap;
   }
 </style>
 </head>
 <body>
 <div id="gameContainer">
-  <canvas id="gameCanvas"></canvas>
 
-  <div id="hud">
-    <div>🏙️ <span id="levelLabel">Level 1</span></div>
-    <div>⭐ <span id="scoreLabel" class="score-good">0</span> / 5</div>
-    <div>⏱️ <span id="timerLabel">30s</span></div>
-  </div>
-
-  <div id="tooltip"></div>
-
-  <!-- START SCREEN -->
+  <!-- Start Screen -->
   <div id="startScreen">
-    <h1>🏘️ LA保险经纪人</h1>
-    <h2>Life Insurance Agent's Day in LA!</h2>
-    <p>抓住合适的客户，签保险！</p>
-    <div class="rules-box">
-      <b>✅ 好客户 (+1分)：</b><br>
-      <span class="good">商人💼、上班族📋、家庭👨‍👩‍👧、情侣💕</span><br><br>
-      <b>❌ 错误目标 (−1分)：</b><br>
-      <span class="bad">小孩🧸、游客🧳、乞丐🎒</span><br><br>
-      🖱️ <b>点击人物</b>即可抓取！<br>
-      🎯 达到 <b>5分</b> 即可过关！<br><br>
-      🏆 第1关 → 大口吃汉堡 🍔<br>
-      🏆 第2关 → 大口吃面条 🍜<br>
-      🏆 第3关 → 满屏金银财宝 💰<br>
-      💀 失败 → 坐在路边吃草 🌿
+    <h1>🏙️ 保险经纪人的日子</h1>
+    <p class="subtitle">洛杉矶街头 — 点击拉客，完成业绩！</p>
+    <div class="rulesBox">
+      <h3>📋 游戏规则</h3>
+      <div class="good">✅ 好目标（+1分）：商人💼 · 上班族📋 · 家庭👨‍👩‍👧 · 情侣💕</div>
+      <div class="bad">❌ 坏目标（-1分）：小孩🧸 · 游客🧳 · 乞丐🎒</div>
+      <div class="note">每关需在30秒内得5分才能过关，共3关</div>
     </div>
     <button id="startBtn">🚀 开始游戏！</button>
   </div>
 
-  <!-- CUTSCENE SCREEN (win) -->
-  <div id="cutsceneScreen">
-    <div id="cutsceneBox">
-      <div id="cutsceneTitle">🎉 过关啦！</div>
-      <span id="cutsceneAnim">🍔</span>
-      <div id="cutsceneDesc">经纪人大口享用美食中...</div>
-      <div id="cutsceneProgressBar"><div id="cutsceneProgressFill"></div></div>
-      <button id="cutsceneSkipBtn">跳过 ▶</button>
-    </div>
+  <!-- Game Canvas -->
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hudBox">🏆 第 <span id="hudLevel">1</span> 关</div>
+    <div class="hudBox">⭐ 得分: <span id="hudScore">0</span> / 5</div>
+    <div class="hudBox">⏱️ <span id="hudTimer">30</span> 秒</div>
   </div>
 
-  <!-- TREASURE SCREEN (level 3 win) -->
-  <div id="treasureScreen">
-    <canvas id="treasureCanvas"></canvas>
-    <div id="treasureTitle">💰 LEGENDARY！💰<br>满屏金银财宝！</div>
-    <div id="treasureEmojis">💎💰🪙👑🏆💍✨🎊💵🌟</div>
-    <button id="treasureNextBtn">🎆 继续 ▶</button>
+  <!-- Cutscene Screen -->
+  <div id="cutsceneScreen" class="overlayScreen">
+    <div class="bigEmoji" id="cutsceneEmoji">🍔</div>
+    <h2 id="cutsceneTitle">过关！休息一下~</h2>
+    <p id="cutsceneText">第一关完成！去吃个汉堡庆祝！</p>
+    <div class="progressBarWrap"><div class="progressBarFill" id="cutsceneBar" style="width:100%"></div></div>
+    <button class="overlayBtn" id="cutsceneSkipBtn">跳过 ▶</button>
   </div>
 
-  <!-- FAIL SCREEN -->
-  <div id="failScreen">
-    <div id="failBox">
-      <span id="failAnim">🌿</span>
-      <div id="failTitle">今天颗粒无收...</div>
-      <div id="failDesc">坐在路边吃草中... 嚼嚼嚼！🐑</div>
-      <div id="failProgressBar"><div id="failProgressFill"></div></div>
-      <button id="failRetryBtn">再试一次 🔄</button>
-    </div>
+  <!-- Treasure Screen (Level 3 win) -->
+  <div id="treasureScreen" class="overlayScreen">
+    <div class="bigEmoji">💰</div>
+    <h2>🎉 恭喜通关！</h2>
+    <p>三关全过！你成为洛杉矶最强保险经纪人！<br>数钱数到手软！💸💸💸</p>
+    <div class="progressBarWrap"><div class="progressBarFill" id="treasureBar" style="width:100%"></div></div>
+    <button class="overlayBtn" id="treasureNextBtn">继续 ▶</button>
   </div>
+
+  <!-- Fail Screen -->
+  <div id="failScreen" class="overlayScreen">
+    <div class="bigEmoji">🌿</div>
+    <h2>今天颗粒无收...</h2>
+    <p>坐在路边吃草 🌿<br>明天再努力吧！</p>
+    <div class="progressBarWrap"><div class="progressBarFill" id="failBar" style="width:100%"></div></div>
+    <button class="overlayBtn" id="failRetryBtn">再试一次 🔄</button>
+  </div>
+
+  <!-- Tooltip -->
+  <div id="tooltip"></div>
+
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // ── DOM REFS ──
-  const startScreen    = document.getElementById('startScreen');
+  // ===================== ELEMENT REFS =====================
+  const canvas       = document.getElementById('gameCanvas');
+  const ctx          = canvas.getContext('2d');
+  const startScreen  = document.getElementById('startScreen');
+  const hud          = document.getElementById('hud');
   const cutsceneScreen = document.getElementById('cutsceneScreen');
   const treasureScreen = document.getElementById('treasureScreen');
-  const failScreen     = document.getElementById('failScreen');
-  const hud            = document.getElementById('hud');
-  const canvas         = document.getElementById('gameCanvas');
-  const ctx            = canvas.getContext('2d');
-  const tooltip        = document.getElementById('tooltip');
+  const failScreen   = document.getElementById('failScreen');
+  const tooltip      = document.getElementById('tooltip');
+  const hudLevel     = document.getElementById('hudLevel');
+  const hudScore     = document.getElementById('hudScore');
+  const hudTimer     = document.getElementById('hudTimer');
 
-  const startBtn        = document.getElementById('startBtn');
-  const cutsceneSkipBtn = document.getElementById('cutsceneSkipBtn');
-  const treasureNextBtn = document.getElementById('treasureNextBtn');
-  const failRetryBtn    = document.getElementById('failRetryBtn');
+  // ===================== GAME STATE =====================
+  let level = 1;
+  let score = 0;
+  let timeLeft = 30;
+  let gameRunning = false;
+  let timerInterval = null;
+  let animFrameId = null;
+  let persons = [];
+  let floatingTexts = [];
+  let spawnTimer = 0;
+  let cutsceneTimeout = null;
 
-  const levelLabel = document.getElementById('levelLabel');
-  const scoreLabel = document.getElementById('scoreLabel');
-  const timerLabel = document.getElementById('timerLabel');
-
-  // ── GAME STATE ──
-  let level     = 1;
-  let score     = 0;
-  let timeLeft  = 30;
-  let timerID   = null;
-  let running   = false;
-  let people    = [];
-  let vehicles  = [];
-  let buildings = [];
-  let clouds    = [];
-  let animFrame = null;
-  let walkTick  = 0;
-  let mouseX = -999, mouseY = -999;
-
-  // Spawn intervals
-  let spawnPeopleID = null;
-  let spawnCarID    = null;
-
-  // ── CANVAS RESIZE ──
-  function resizeCanvas() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  resizeCanvas();
-  window.addEventListener('resize', () => { resizeCanvas(); buildScene(); });
-
-  // ── GROUND Y ──
-  const groundY = () => canvas.height * 0.63;
-
-  // ── PERSON TYPES ──
-  const PERSON_TYPES = [
-    { type:'business', label:'商人',   emoji:'💼', good:true,  shirtColor:'#2c3e50', pantColor:'#1a252f', skinColor:'#f0c27f', hatEmoji:'🎩', female:false },
-    { type:'worker',   label:'上班族', emoji:'📋', good:true,  shirtColor:'#2980b9', pantColor:'#1a5276', skinColor:'#f0c27f', hatEmoji:null,  female:false },
-    { type:'family',   label:'家庭',   emoji:'👨‍👩‍👧', good:true,  shirtColor:'#27ae60', pantColor:'#1e8449', skinColor:'#f5cba7', hatEmoji:null,  female:false },
-    { type:'couple',   label:'情侣',   emoji:'💕', good:true,  shirtColor:'#8e44ad', pantColor:'#6c3483', skinColor:'#fad7a0', hatEmoji:null,  female:true  },
-    // bad targets — each has a special prop drawn on them
-    { type:'kid',      label:'小孩',   emoji:'🧸', good:false, shirtColor:'#e74c3c', pantColor:'#a93226', skinColor:'#f9e4b7', hatEmoji:'🧢',  female:false },
-    { type:'tourist',  label:'游客',   emoji:'📸', good:false, shirtColor:'#e67e22', pantColor:'#ca6f1e', skinColor:'#fdebd0', hatEmoji:'👒',  female:false },
-    { type:'beggar',   label:'乞丐',   emoji:'🎒', good:false, shirtColor:'#7f8c8d', pantColor:'#515a5a', skinColor:'#d5b59e', hatEmoji:null,  female:false },
+  // ===================== PERSON TYPES =====================
+  const personTypes = [
+    { id:'businessman', label:'商人', good:true,  color:'#1a3a6b', accent:'#2980b9' },
+    { id:'worker',      label:'上班族', good:true, color:'#2471a3', accent:'#85c1e9' },
+    { id:'family',      label:'家庭',  good:true,  color:'#1e8449', accent:'#58d68d' },
+    { id:'couple',      label:'情侣',  good:true,  color:'#6c3483', accent:'#c39bd3' },
+    { id:'kid',         label:'小孩',  good:false, color:'#c0392b', accent:'#f1948a' },
+    { id:'tourist',     label:'游客',  good:false, color:'#d35400', accent:'#f0b27a' },
+    { id:'beggar',      label:'乞丐',  good:false, color:'#616a6b', accent:'#aab7b8' },
   ];
 
-  // ── BUILDING DEFS ──
-  const BUILDING_TYPES = [
-    { name:'民宅',   color:'#e8a87c', roofColor:'#c0392b', emoji:'🏠', w:72,  h:75  },
-    { name:'汉堡店', color:'#f39c12', roofColor:'#d35400', emoji:'🍔', w:82,  h:85  },
-    { name:'餐厅',   color:'#9b59b6', roofColor:'#6c3483', emoji:'🍽️',  w:90,  h:92  },
-    { name:'办公楼', color:'#2980b9', roofColor:'#1a5276', emoji:'🏢', w:66,  h:115 },
-    { name:'民宅',   color:'#a8d8ea', roofColor:'#e74c3c', emoji:'🏠', w:72,  h:72  },
-    { name:'办公楼', color:'#27ae60', roofColor:'#145a32', emoji:'🏢', w:66,  h:105 },
-  ];
+  // ===================== DRAW HELPERS =====================
+  // Draw a person at (cx, baseY), scale = height multiplier
+  function drawPerson(cx, baseY, type, walkPhase, scale) {
+    scale = scale || 1;
+    const H = 90 * scale;   // full height
+    const headR = 12 * scale;
+    const bodyH = 30 * scale;
+    const legH  = 28 * scale;
+    const armLen = 20 * scale;
+    const shoulderY = baseY - legH - bodyH;
+    const neckY     = shoulderY - 2 * scale;
+    const headY     = neckY - headR;
 
-  // ── BUILD SCENE ──
-  function buildScene() {
-    buildings = [];
-    clouds    = [];
-    const gy  = groundY();
-    const cnt = 7;
-    const sp  = canvas.width / (cnt + 1);
-    for (let i = 0; i < cnt; i++) {
-      const bt = BUILDING_TYPES[i % BUILDING_TYPES.length];
-      buildings.push({ x: sp*(i+1), y: gy, w:bt.w, h:bt.h, color:bt.color, roofColor:bt.roofColor, emoji:bt.emoji, name:bt.name });
-    }
-    for (let i = 0; i < 5; i++) {
-      clouds.push({ x: Math.random()*canvas.width, y: 40+Math.random()*80, r: 35+Math.random()*30, speed: 0.3+Math.random()*0.3 });
-    }
-  }
+    // Walking leg animation
+    const legSwing = Math.sin(walkPhase) * 14 * scale;
 
-  // ── SPAWN PERSON ──
-  function spawnPerson() {
-    if (!running) return;
-    const tdata    = PERSON_TYPES[Math.floor(Math.random() * PERSON_TYPES.length)];
-    const fromLeft = Math.random() < 0.5;
-    const personH  = Math.max(52, canvas.height * 0.09);
-    const speed    = 0.55 + Math.random() * 0.75 + (level - 1) * 0.2;
-    people.push({
-      x:         fromLeft ? -40 : canvas.width + 40,
-      baseY:     groundY(),
-      vx:        fromLeft ? speed : -speed,
-      personH:   personH,
-      walkPhase: Math.random() * Math.PI * 2,
-      ...tdata,
-      clicked:   false,
-      flash:     0,
-      flashGood: true,
-    });
-  }
+    ctx.lineWidth = 2 * scale;
+    ctx.lineCap = 'round';
 
-  function spawnVehicle() {
-    if (!running) return;
-    const fromLeft = Math.random() < 0.5;
-    const types = ['🚗','🚙','🚐','🚕','🚌'];
-    vehicles.push({
-      x:     fromLeft ? -60 : canvas.width + 60,
-      y:     groundY() - 24,
-      vx:    fromLeft ? 2.5+Math.random() : -(2.5+Math.random()),
-      emoji: types[Math.floor(Math.random()*types.length)],
-      size:  36,
-    });
-  }
-
-  // ── DRAW BACKGROUND ──
-  function drawBackground() {
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.65);
-    skyGrad.addColorStop(0, '#87CEEB');
-    skyGrad.addColorStop(1, '#d4f1f9');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.65);
-
-    const gGrad = ctx.createLinearGradient(0, canvas.height * 0.65, 0, canvas.height);
-    gGrad.addColorStop(0,    '#6dbb63');
-    gGrad.addColorStop(0.18, '#5a8f50');
-    gGrad.addColorStop(0.19, '#aaa');
-    gGrad.addColorStop(0.55, '#bbb');
-    gGrad.addColorStop(0.56, '#888');
-    gGrad.addColorStop(1,    '#777');
-    ctx.fillStyle = gGrad;
-    ctx.fillRect(0, canvas.height * 0.65, canvas.width, canvas.height * 0.35);
-
-    // road dashes
-    ctx.strokeStyle = '#FFE566';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([28, 18]);
+    // --- Legs ---
+    ctx.strokeStyle = (type.id === 'kid') ? '#8e1a0e' : '#2c3e50';
     ctx.beginPath();
-    ctx.moveTo(0, canvas.height * 0.685 + 18);
-    ctx.lineTo(canvas.width, canvas.height * 0.685 + 18);
+    ctx.moveTo(cx, shoulderY + bodyH);
+    ctx.lineTo(cx - 7 * scale + legSwing, baseY);
     ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  function drawClouds() {
-    ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = '#fff';
-    clouds.forEach(c => {
-      ctx.beginPath();
-      ctx.arc(c.x,          c.y,          c.r,     0, Math.PI*2);
-      ctx.arc(c.x+c.r*0.7,  c.y-c.r*0.3,  c.r*0.7, 0, Math.PI*2);
-      ctx.arc(c.x-c.r*0.6,  c.y-c.r*0.2,  c.r*0.6, 0, Math.PI*2);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-
-  function drawBuilding(b) {
-    ctx.fillStyle = b.color;
-    ctx.fillRect(b.x - b.w/2, b.y - b.h, b.w, b.h);
-    ctx.fillStyle = b.roofColor;
     ctx.beginPath();
-    ctx.moveTo(b.x - b.w/2 - 6, b.y - b.h);
-    ctx.lineTo(b.x,              b.y - b.h - 28);
-    ctx.lineTo(b.x + b.w/2 + 6, b.y - b.h);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    for (let row = 0; row < 2; row++) {
-      for (let col = 0; col < 2; col++) {
-        ctx.fillRect(b.x - b.w/2 + 8 + col*(b.w/2 - 4), b.y - b.h + 12 + row*22, b.w/2 - 14, 14);
-      }
-    }
-    ctx.fillStyle = '#5d4037';
-    ctx.fillRect(b.x - 10, b.y - 22, 20, 22);
-    ctx.font = '18px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText(b.emoji, b.x, b.y - b.h - 34);
-    ctx.font = 'bold 10px Arial';
-    ctx.fillStyle = '#333';
-    ctx.fillText(b.name, b.x, b.y + 11);
-  }
-
-  // ── DRAW STICK PERSON ──
-  function drawPerson(p) {
-    const H = p.personH;
-    const feetY = p.baseY;
-    const cx    = p.x;
-
-    ctx.save();
-    ctx.translate(cx, feetY);
-
-    // flash effect
-    if (p.flash > 0) {
-      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(p.flash * 1.1);
-    }
-
-    const headR     = H * 0.13;
-    const shoulderY = -(H - headR*2 - H*0.04);
-    const hipY      = shoulderY + H * 0.38;
-    const legLen    = Math.abs(hipY);
-    const armLen    = H * 0.25;
-    const torsoW    = H * 0.22;
-
-    const phase    = p.walkPhase + walkTick * 0.055;
-    const legSwing = Math.sin(phase) * 13;
-    const armSwing = -Math.sin(phase) * 9;
-
-    const facingRight = p.vx >= 0;
-    if (!facingRight) ctx.scale(-1, 1);
-
-    // shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-    ctx.beginPath();
-    ctx.ellipse(0, 3, H*0.18, 5, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // ── legs ──
-    ctx.lineWidth = Math.max(3, H * 0.068);
-    ctx.lineCap   = 'round';
-    ctx.strokeStyle = p.pantColor;
-
-    // For female: draw skirt instead of pants
-    if (p.female) {
-      // skirt
-      ctx.fillStyle = '#e91e63';
-      ctx.beginPath();
-      ctx.moveTo(-torsoW/2, hipY - H*0.05);
-      ctx.lineTo(-torsoW*0.85, hipY + H*0.18);
-      ctx.lineTo(torsoW*0.85,  hipY + H*0.18);
-      ctx.lineTo(torsoW/2,     hipY - H*0.05);
-      ctx.closePath();
-      ctx.fill();
-      // legs below skirt
-      ctx.strokeStyle = p.skinColor;
-      ctx.lineWidth = Math.max(2.5, H*0.055);
-      ctx.beginPath();
-      ctx.moveTo(-torsoW*0.3, hipY + H*0.18);
-      ctx.lineTo(-torsoW*0.3 - legSwing*0.4, hipY + H*0.18 + legLen*0.5);
-      ctx.lineTo(-legSwing*0.6, 0);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(torsoW*0.3,  hipY + H*0.18);
-      ctx.lineTo(torsoW*0.3 + legSwing*0.4, hipY + H*0.18 + legLen*0.5);
-      ctx.lineTo(legSwing*0.6, 0);
-      ctx.stroke();
-    } else {
-      // left leg
-      ctx.beginPath();
-      ctx.moveTo(0, hipY);
-      ctx.lineTo(-legSwing*0.5, hipY + legLen*0.5);
-      ctx.lineTo(-legSwing, 0);
-      ctx.stroke();
-      // right leg
-      ctx.beginPath();
-      ctx.moveTo(0, hipY);
-      ctx.lineTo(legSwing*0.5, hipY + legLen*0.5);
-      ctx.lineTo(legSwing, 0);
-      ctx.stroke();
-    }
-
-    // shoes
-    ctx.fillStyle = p.female ? '#ff69b4' : '#333';
-    ctx.beginPath();
-    ctx.ellipse(-legSwing + 3, -1, 7, 4, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(legSwing + 3, -1, 7, 4, 0, 0, Math.PI*2);
-    ctx.fill();
-
-    // ── torso ──
-    ctx.fillStyle = p.shirtColor;
-    ctx.beginPath();
-    ctx.roundRect(-torsoW/2, shoulderY, torsoW, Math.abs(hipY - shoulderY), 4);
-    ctx.fill();
-
-    // collar / tie for business
-    if (p.type === 'business' || p.type === 'worker') {
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.moveTo(-torsoW*0.18, shoulderY);
-      ctx.lineTo(0, shoulderY + H*0.07);
-      ctx.lineTo(torsoW*0.18, shoulderY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#e74c3c';
-      ctx.beginPath();
-      ctx.moveTo(-torsoW*0.08, shoulderY + H*0.07);
-      ctx.lineTo(0, hipY - H*0.04);
-      ctx.lineTo(torsoW*0.08, shoulderY + H*0.07);
-      ctx.closePath();
-      ctx.fill();
-    }
-
-    // ── arms ──
-    ctx.lineWidth = Math.max(2.5, H*0.055);
-    ctx.strokeStyle = p.shirtColor;
-
-    ctx.beginPath();
-    ctx.moveTo(-torsoW/2, shoulderY + 4);
-    ctx.lineTo(-torsoW/2 - armSwing,       shoulderY + armLen*0.5);
-    ctx.lineTo(-torsoW/2 - armSwing*0.6,   shoulderY + armLen);
+    ctx.moveTo(cx, shoulderY + bodyH);
+    ctx.lineTo(cx + 7 * scale - legSwing, baseY);
     ctx.stroke();
 
+    // --- Body ---
+    ctx.fillStyle = type.color;
     ctx.beginPath();
-    ctx.moveTo(torsoW/2, shoulderY + 4);
-    ctx.lineTo(torsoW/2 + armSwing,        shoulderY + armLen*0.5);
-    ctx.lineTo(torsoW/2 + armSwing*0.6,    shoulderY + armLen);
+    ctx.roundRect(cx - 11*scale, shoulderY, 22*scale, bodyH, 4*scale);
+    ctx.fill();
+
+    // --- Arms ---
+    const armSwing = Math.cos(walkPhase) * 10 * scale;
+    ctx.strokeStyle = type.color;
+    ctx.lineWidth = 5 * scale;
+    // Left arm
+    ctx.beginPath();
+    ctx.moveTo(cx - 10*scale, shoulderY + 4*scale);
+    ctx.lineTo(cx - 10*scale - armLen, shoulderY + 14*scale + armSwing);
+    ctx.stroke();
+    // Right arm
+    ctx.beginPath();
+    ctx.moveTo(cx + 10*scale, shoulderY + 4*scale);
+    ctx.lineTo(cx + 10*scale + armLen*0.3, shoulderY + 14*scale - armSwing);
     ctx.stroke();
 
-    // hands
-    ctx.fillStyle = p.skinColor;
+    // --- Head ---
+    ctx.fillStyle = '#FDBCB4'; // skin
     ctx.beginPath();
-    ctx.arc(-torsoW/2 - armSwing*0.6, shoulderY + armLen, 4, 0, Math.PI*2);
+    ctx.arc(cx, headY, headR, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = '#c9a090';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // --- Eyes ---
+    ctx.fillStyle = '#2c3e50';
+    ctx.beginPath(); ctx.arc(cx - 4*scale, headY - 1*scale, 1.8*scale, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 4*scale, headY - 1*scale, 1.8*scale, 0, Math.PI*2); ctx.fill();
+
+    // --- Smile ---
+    ctx.strokeStyle = '#c0392b';
+    ctx.lineWidth = 1.2*scale;
     ctx.beginPath();
-    ctx.arc(torsoW/2 + armSwing*0.6, shoulderY + armLen, 4, 0, Math.PI*2);
-    ctx.fill();
+    ctx.arc(cx, headY + 2*scale, 4*scale, 0.1, Math.PI - 0.1);
+    ctx.stroke();
 
-    // ── SPECIAL PROPS ──
-
-    // 🎒 乞丐背大包: draw a big lumpy backpack on their back
-    if (p.type === 'beggar') {
-      // backpack body — drawn behind torso (on the "back" side, i.e. negative x since facing right)
-      const bpX = -torsoW * 0.62;
-      const bpY = shoulderY + H * 0.03;
-      const bpW = torsoW * 0.72;
-      const bpH = H * 0.36;
-      // main sack — lumpy brown bag
-      ctx.fillStyle = '#6d4c20';
+    // ---- TYPE-SPECIFIC ACCESSORIES ----
+    if (type.id === 'businessman') {
+      // Briefcase in right hand
+      let bx = cx + 14*scale + armLen*0.3;
+      let by = shoulderY + 18*scale;
+      ctx.fillStyle = '#784212';
+      ctx.fillRect(bx, by, 14*scale, 10*scale);
+      ctx.strokeStyle = '#5d3d1f';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(bx, by, 14*scale, 10*scale);
+      // Handle
       ctx.beginPath();
-      ctx.roundRect(bpX - bpW, bpY, bpW, bpH, 8);
-      ctx.fill();
-      // lumpy bumps on top of bag
-      ctx.fillStyle = '#8B6333';
-      ctx.beginPath();
-      ctx.arc(bpX - bpW * 0.75, bpY + 4, bpW * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(bpX - bpW * 0.45, bpY + 2, bpW * 0.18, 0, Math.PI * 2);
-      ctx.fill();
-      // strap over shoulder
-      ctx.strokeStyle = '#5a3a10';
-      ctx.lineWidth = Math.max(2, H * 0.038);
-      ctx.beginPath();
-      ctx.moveTo(bpX - bpW * 0.5, bpY);
-      ctx.quadraticCurveTo(bpX * 0.2, shoulderY - headR * 0.3, torsoW * 0.1, shoulderY + H * 0.12);
+      ctx.moveTo(bx + 4*scale, by);
+      ctx.lineTo(bx + 4*scale, by - 4*scale);
+      ctx.lineTo(bx + 10*scale, by - 4*scale);
+      ctx.lineTo(bx + 10*scale, by);
       ctx.stroke();
-      // small buckle detail
-      ctx.fillStyle = '#c8a840';
-      ctx.fillRect(bpX - bpW * 0.6, bpY + bpH * 0.45, bpW * 0.28, H * 0.045);
+      // Hat
+      ctx.fillStyle = '#1a252f';
+      ctx.fillRect(cx - 14*scale, headY - headR - 12*scale, 28*scale, 12*scale);
+      ctx.fillRect(cx - 17*scale, headY - headR, 34*scale, 4*scale);
     }
 
-    // 🧳 游客推拉杆箱: draw a rolling suitcase being dragged behind them
-    if (p.type === 'tourist') {
-      // The suitcase trails behind (negative x direction since character faces right)
-      const scaleOffX = -torsoW * 0.5 - H * 0.28; // behind the person
-      const scaleTopY = hipY - H * 0.05;           // starts near hip height
-      const scaleW    = H * 0.19;
-      const scaleH    = H * 0.28;
-
-      // handle rod (arm pulling it)
-      ctx.strokeStyle = '#888';
-      ctx.lineWidth   = Math.max(1.5, H * 0.025);
-      ctx.beginPath();
-      // from hand position to top of suitcase
-      ctx.moveTo(torsoW/2 + armSwing*0.6, shoulderY + armLen);
-      ctx.lineTo(scaleOffX + scaleW * 0.5, scaleTopY - H * 0.08);
-      ctx.stroke();
-
-      // suitcase body
-      ctx.fillStyle = '#e74c3c';
-      ctx.beginPath();
-      ctx.roundRect(scaleOffX, scaleTopY, scaleW, scaleH, 4);
-      ctx.fill();
-      // suitcase highlight stripe
-      ctx.fillStyle = '#f1948a';
-      ctx.fillRect(scaleOffX + scaleW * 0.12, scaleTopY + scaleH * 0.1, scaleW * 0.2, scaleH * 0.8);
-      // suitcase latch
-      ctx.fillStyle = '#888';
-      ctx.fillRect(scaleOffX + scaleW * 0.38, scaleTopY + scaleH * 0.42, scaleW * 0.24, scaleH * 0.16);
-      // extendable handle on top of suitcase
+    if (type.id === 'worker') {
+      // Clipboard in right hand
+      let bx = cx + 14*scale + armLen*0.3;
+      let by = shoulderY + 10*scale;
+      ctx.fillStyle = '#f0d9b5';
+      ctx.fillRect(bx, by, 12*scale, 16*scale);
+      ctx.fillStyle = '#aaa';
+      ctx.fillRect(bx + 3*scale, by - 3*scale, 6*scale, 5*scale);
       ctx.strokeStyle = '#555';
-      ctx.lineWidth   = Math.max(1.5, H * 0.024);
-      ctx.beginPath();
-      ctx.moveTo(scaleOffX + scaleW * 0.25, scaleTopY);
-      ctx.lineTo(scaleOffX + scaleW * 0.25, scaleTopY - H * 0.1);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(scaleOffX + scaleW * 0.75, scaleTopY);
-      ctx.lineTo(scaleOffX + scaleW * 0.75, scaleTopY - H * 0.1);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(scaleOffX + scaleW * 0.25, scaleTopY - H * 0.1);
-      ctx.lineTo(scaleOffX + scaleW * 0.75, scaleTopY - H * 0.1);
-      ctx.stroke();
-      // wheels
-      ctx.fillStyle = '#333';
-      ctx.beginPath();
-      ctx.arc(scaleOffX + scaleW * 0.22, scaleTopY + scaleH + 3, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(scaleOffX + scaleW * 0.78, scaleTopY + scaleH + 3, 4, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.lineWidth = 1;
+      for (let i=0;i<3;i++) {
+        ctx.beginPath();
+        ctx.moveTo(bx+2*scale, by+4*scale+i*4*scale);
+        ctx.lineTo(bx+10*scale, by+4*scale+i*4*scale);
+        ctx.stroke();
+      }
     }
 
-    // 🧸 小孩抱玩具熊: draw a teddy bear held in front arms
-    if (p.type === 'kid') {
-      // toy bear held at waist/chest level in front
-      const bearCX = torsoW * 0.55;              // in front (positive x = front when facing right)
-      const bearCY = shoulderY + armLen * 0.85;  // roughly at hand level
-      const bearR  = H * 0.095;
-
-      // bear body
-      ctx.fillStyle = '#c8922a';
+    if (type.id === 'family') {
+      // Small child beside
+      let childX = cx + 20*scale;
+      let childScale = scale * 0.55;
+      let childH = 90 * childScale;
+      let cBaseY = baseY;
+      let cLegSwing = Math.sin(walkPhase + 0.5) * 8 * childScale;
+      let cShoulderY = cBaseY - 28*childScale - 30*childScale;
+      let cNeckY = cShoulderY - 2*childScale;
+      let cHeadY = cNeckY - 12*childScale;
+      // Child legs
+      ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2*childScale;
+      ctx.beginPath(); ctx.moveTo(childX, cShoulderY+30*childScale);
+      ctx.lineTo(childX-5*childScale+cLegSwing, cBaseY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(childX, cShoulderY+30*childScale);
+      ctx.lineTo(childX+5*childScale-cLegSwing, cBaseY); ctx.stroke();
+      // Child body
+      ctx.fillStyle = '#58d68d';
+      ctx.fillRect(childX-9*childScale, cShoulderY, 18*childScale, 30*childScale);
+      // Child arms
+      ctx.strokeStyle = '#58d68d'; ctx.lineWidth = 4*childScale;
+      ctx.beginPath(); ctx.moveTo(childX-9*childScale, cShoulderY+4*childScale);
+      ctx.lineTo(childX-9*childScale-14*childScale, cShoulderY+14*childScale); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(childX+9*childScale, cShoulderY+4*childScale);
+      ctx.lineTo(childX+9*childScale+6*childScale, cShoulderY+14*childScale); ctx.stroke();
+      // Child head
+      ctx.fillStyle = '#FDBCB4';
+      ctx.beginPath(); ctx.arc(childX, cHeadY, 12*childScale, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#c9a090'; ctx.lineWidth=1; ctx.stroke();
+      // Child eyes
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath(); ctx.arc(childX-3*childScale, cHeadY, 1.5*childScale,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(childX+3*childScale, cHeadY, 1.5*childScale,0,Math.PI*2); ctx.fill();
+      // Connecting hand
+      ctx.strokeStyle = '#FDBCB4'; ctx.lineWidth = 3*scale;
       ctx.beginPath();
-      ctx.ellipse(bearCX, bearCY + bearR * 0.6, bearR * 0.8, bearR, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // bear head
-      ctx.fillStyle = '#c8922a';
-      ctx.beginPath();
-      ctx.arc(bearCX, bearCY - bearR * 0.25, bearR * 0.72, 0, Math.PI * 2);
-      ctx.fill();
-      // bear ears
-      ctx.beginPath();
-      ctx.arc(bearCX - bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(bearCX + bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      // inner ears
-      ctx.fillStyle = '#e8b85a';
-      ctx.beginPath();
-      ctx.arc(bearCX - bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.16, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(bearCX + bearR * 0.5, bearCY - bearR * 0.88, bearR * 0.16, 0, Math.PI * 2);
-      ctx.fill();
-      // bear tummy patch
-      ctx.fillStyle = '#e8b85a';
-      ctx.beginPath();
-      ctx.ellipse(bearCX, bearCY + bearR * 0.5, bearR * 0.42, bearR * 0.52, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // bear face
-      ctx.fillStyle = '#5d3a1a';
-      // eyes
-      ctx.beginPath();
-      ctx.arc(bearCX - bearR * 0.28, bearCY - bearR * 0.3, bearR * 0.1, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(bearCX + bearR * 0.28, bearCY - bearR * 0.3, bearR * 0.1, 0, Math.PI * 2);
-      ctx.fill();
-      // nose
-      ctx.beginPath();
-      ctx.arc(bearCX, bearCY - bearR * 0.08, bearR * 0.12, 0, Math.PI * 2);
-      ctx.fill();
-      // small smile
-      ctx.strokeStyle = '#5d3a1a';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.arc(bearCX, bearCY - bearR * 0.02, bearR * 0.18, 0.15, Math.PI - 0.15);
-      ctx.stroke();
-      // kid's arm hugging the bear — redraw right arm curved around it
-      ctx.strokeStyle = p.shirtColor;
-      ctx.lineWidth = Math.max(2.5, H * 0.055);
-      ctx.beginPath();
-      ctx.moveTo(torsoW/2, shoulderY + 4);
-      ctx.quadraticCurveTo(torsoW/2 + bearR * 1.1, bearCY, bearCX - bearR * 0.6, bearCY + bearR * 0.4);
+      ctx.moveTo(cx - 10*scale, shoulderY + bodyH - 8*scale);
+      ctx.lineTo(childX + 9*childScale + 6*childScale, cShoulderY + 14*childScale);
       ctx.stroke();
     }
 
-    // ── neck ──
-    ctx.strokeStyle = p.skinColor;
-    ctx.lineWidth   = H * 0.06;
-    ctx.beginPath();
-    ctx.moveTo(0, shoulderY);
-    ctx.lineTo(0, shoulderY - headR*0.4);
-    ctx.stroke();
-
-    // ── head ──
-    ctx.fillStyle = p.skinColor;
-    ctx.beginPath();
-    ctx.arc(0, shoulderY - headR, headR, 0, Math.PI*2);
-    ctx.fill();
-
-    // hair
-    if (p.female) {
-      // long hair
-      ctx.fillStyle = '#8B4513';
+    if (type.id === 'couple') {
+      // Second person (partner) beside
+      let px = cx + 22*scale;
+      let pSwing = Math.sin(walkPhase + 0.3) * 14 * scale;
+      let pShoulderY = baseY - legH - bodyH;
+      // Partner legs
+      ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 2*scale;
+      ctx.beginPath(); ctx.moveTo(px, pShoulderY+bodyH); ctx.lineTo(px-7*scale+pSwing, baseY); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px, pShoulderY+bodyH); ctx.lineTo(px+7*scale-pSwing, baseY); ctx.stroke();
+      // Partner body
+      ctx.fillStyle = '#c39bd3';
+      ctx.beginPath(); ctx.roundRect(px-11*scale, pShoulderY, 22*scale, bodyH, 4*scale); ctx.fill();
+      // Partner arms
+      ctx.strokeStyle = '#c39bd3'; ctx.lineWidth = 5*scale;
+      ctx.beginPath(); ctx.moveTo(px-10*scale, pShoulderY+4*scale); ctx.lineTo(px-20*scale, pShoulderY+16*scale+pSwing*0.4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px+10*scale, pShoulderY+4*scale); ctx.lineTo(px+13*scale, pShoulderY+16*scale-pSwing*0.4); ctx.stroke();
+      // Partner head
+      ctx.fillStyle = '#FDBCB4';
+      ctx.beginPath(); ctx.arc(px, neckY - headR, headR, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#c9a090'; ctx.lineWidth=1.5; ctx.stroke();
+      // Partner eyes
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath(); ctx.arc(px-4*scale, neckY-headR-1*scale, 1.8*scale,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px+4*scale, neckY-headR-1*scale, 1.8*scale,0,Math.PI*2); ctx.fill();
+      // Holding hands line
+      ctx.strokeStyle = '#FDBCB4'; ctx.lineWidth = 3*scale;
       ctx.beginPath();
-      ctx.arc(0, shoulderY - headR, headR * 1.05, Math.PI, 0);
-      ctx.lineTo(headR * 1.1, shoulderY - headR*0.1);
-      ctx.quadraticCurveTo(headR*1.3, shoulderY + headR*0.8, headR*0.6, shoulderY + headR*1.0);
-      ctx.lineTo(-headR*0.6, shoulderY + headR*1.0);
-      ctx.quadraticCurveTo(-headR*1.3, shoulderY + headR*0.8, -headR*1.1, shoulderY - headR*0.1);
-      ctx.closePath();
-      ctx.fill();
-    } else if (p.type === 'kid') {
-      ctx.fillStyle = '#8B4513';
-      ctx.beginPath();
-      ctx.arc(0, shoulderY - headR*1.05, headR*0.9, Math.PI, 0);
-      ctx.fill();
-    } else if (p.type === 'beggar') {
-      ctx.fillStyle = '#555';
-      ctx.beginPath();
-      ctx.arc(0, shoulderY - headR*1.02, headR*0.95, Math.PI, 0);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = '#5d3a1a';
-      ctx.fillRect(-headR*0.9, shoulderY - headR*2.0, headR*1.8, headR*0.9);
+      ctx.moveTo(cx+10*scale+armLen*0.3, shoulderY+14*scale);
+      ctx.lineTo(px-20*scale, pShoulderY+16*scale);
+      ctx.stroke();
+      // Heart above
+      ctx.fillStyle = '#e74c3c'; ctx.font = `${14*scale}px Arial`;
+      ctx.fillText('♥', cx+11*scale, shoulderY - 6*scale);
     }
 
-    // face
-    ctx.fillStyle = '#333';
-    ctx.beginPath();
-    ctx.arc(-headR*0.3, shoulderY - headR - headR*0.1, headR*0.1, 0, Math.PI*2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc( headR*0.3, shoulderY - headR - headR*0.1, headR*0.1, 0, Math.PI*2);
-    ctx.fill();
-    // exaggerated smile
-    ctx.beginPath();
-    ctx.arc(0, shoulderY - headR + headR*0.25, headR*0.32, 0.1, Math.PI - 0.1);
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth   = 1.5;
-    ctx.stroke();
-    // blush for female
-    if (p.female) {
-      ctx.fillStyle = 'rgba(255,100,100,0.3)';
-      ctx.beginPath();
-      ctx.ellipse(-headR*0.55, shoulderY - headR + headR*0.1, headR*0.25, headR*0.15, 0, 0, Math.PI*2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse( headR*0.55, shoulderY - headR + headR*0.1, headR*0.25, headR*0.15, 0, 0, Math.PI*2);
-      ctx.fill();
+    if (type.id === 'kid') {
+      // Teddy bear in arms
+      let bx = cx + 10*scale + armLen*0.3;
+      let by = shoulderY + 8*scale;
+      // Bear body
+      ctx.fillStyle = '#c8a46e';
+      ctx.beginPath(); ctx.ellipse(bx+6*scale, by+7*scale, 7*scale, 8*scale, 0, 0, Math.PI*2); ctx.fill();
+      // Bear head
+      ctx.beginPath(); ctx.arc(bx+6*scale, by+1*scale, 6*scale, 0, Math.PI*2); ctx.fill();
+      // Bear ears
+      ctx.beginPath(); ctx.arc(bx+1*scale, by-4*scale, 3*scale, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx+11*scale, by-4*scale, 3*scale, 0, Math.PI*2); ctx.fill();
+      // Bear face
+      ctx.fillStyle = '#8b6914';
+      ctx.beginPath(); ctx.arc(bx+4*scale, by+1*scale, 1.2*scale,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx+8*scale, by+1*scale, 1.2*scale,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx+6*scale, by+3.5*scale, 2*scale,0,Math.PI*2); ctx.fill();
     }
 
-    // hat
-    if (p.hatEmoji) {
-      ctx.font = (headR * 1.7) + 'px Arial';
+    if (type.id === 'tourist') {
+      // Rolling suitcase being pulled
+      let sx = cx + 16*scale; // suitcase behind (to the right if moving left, adjust)
+      let sy = baseY - 28*scale;
+      // Handle extending up
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 2*scale;
+      ctx.beginPath();
+      ctx.moveTo(cx - 12*scale, shoulderY + 10*scale);
+      ctx.lineTo(sx + 5*scale, sy - 18*scale);
+      ctx.stroke();
+      // Handle top
+      ctx.beginPath();
+      ctx.moveTo(sx + 2*scale, sy - 18*scale);
+      ctx.lineTo(sx + 8*scale, sy - 18*scale);
+      ctx.stroke();
+      // Suitcase body
+      ctx.fillStyle = '#e67e22';
+      ctx.fillRect(sx, sy, 20*scale, 24*scale);
+      ctx.strokeStyle = '#a04000'; ctx.lineWidth = 1.5*scale;
+      ctx.strokeRect(sx, sy, 20*scale, 24*scale);
+      // Suitcase stripes
+      ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.5*scale;
+      ctx.beginPath(); ctx.moveTo(sx, sy+8*scale); ctx.lineTo(sx+20*scale, sy+8*scale); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx, sy+16*scale); ctx.lineTo(sx+20*scale, sy+16*scale); ctx.stroke();
+      // Wheels
+      ctx.fillStyle = '#2c3e50';
+      ctx.beginPath(); ctx.arc(sx+4*scale, baseY-2*scale, 4*scale, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx+16*scale, baseY-2*scale, 4*scale, 0, Math.PI*2); ctx.fill();
+    }
+
+    if (type.id === 'beggar') {
+      // Large backpack on back
+      let bx = cx + 10*scale;
+      let by = shoulderY - 5*scale;
+      // Big overstuffed bag
+      ctx.fillStyle = '#4a4a4a';
+      ctx.beginPath(); ctx.ellipse(bx+10*scale, by+20*scale, 14*scale, 20*scale, -0.2, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#2c2c2c'; ctx.lineWidth = 1.5*scale; ctx.stroke();
+      // Bag straps
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 2.5*scale;
+      ctx.beginPath(); ctx.moveTo(bx+2*scale, by+4*scale); ctx.lineTo(cx-3*scale, shoulderY+22*scale); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx+12*scale, by+4*scale); ctx.lineTo(cx+3*scale, shoulderY+22*scale); ctx.stroke();
+      // Stuff sticking out
+      ctx.fillStyle = '#7f8c8d';
+      ctx.beginPath(); ctx.ellipse(bx+8*scale, by-2*scale, 5*scale, 5*scale, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(bx+15*scale, by+2*scale, 4*scale, 4*scale, 0, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // ===================== BACKGROUND =====================
+  function drawBackground() {
+    // Sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, 300);
+    sky.addColorStop(0, '#87CEEB');
+    sky.addColorStop(1, '#FDB97D');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, 800, 500);
+
+    // Sun
+    ctx.fillStyle = '#FFD700';
+    ctx.beginPath(); ctx.arc(720, 60, 40, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,215,0,0.3)';
+    ctx.beginPath(); ctx.arc(720, 60, 55, 0, Math.PI*2); ctx.fill();
+
+    // Clouds (static)
+    drawCloud(100, 70, 0.8);
+    drawCloud(320, 50, 1.0);
+    drawCloud(560, 80, 0.7);
+
+    // Buildings far back
+    drawBuilding(30, 280, 80, 170, '#b0c4de');
+    drawBuilding(120, 250, 60, 200, '#a9c8d4');
+    drawBuilding(190, 260, 90, 190, '#8faabc');
+    drawBuilding(290, 230, 70, 220, '#9db8cc');
+    drawBuilding(370, 270, 100, 180, '#aab8c2');
+    drawBuilding(480, 240, 65, 210, '#95aabd');
+    drawBuilding(555, 255, 85, 195, '#8fa8bb');
+    drawBuilding(650, 245, 75, 205, '#9db5c8');
+    drawBuilding(735, 260, 80, 190, '#a8bfcd');
+
+    // Buildings mid
+    drawBuilding(0, 320, 70, 130, '#e8d5b7');
+    drawBuilding(80, 310, 55, 140, '#dcc9a8');
+    drawBuilding(145, 305, 80, 145, '#e6d4ba');
+    drawBuilding(235, 300, 60, 150, '#d9c8a5');
+    drawBuilding(305, 315, 75, 135, '#e0ceaf');
+    drawBuilding(390, 300, 90, 150, '#d8c7a0');
+    drawBuilding(490, 310, 65, 140, '#dcc9a8');
+    drawBuilding(565, 305, 80, 145, '#e2d0b2');
+    drawBuilding(655, 300, 70, 150, '#d9c8a5');
+    drawBuilding(735, 315, 65, 135, '#e0ceaf');
+
+    // Ground
+    ctx.fillStyle = '#c8a96e';
+    ctx.fillRect(0, 440, 800, 60);
+    // Sidewalk
+    ctx.fillStyle = '#d4c5a9';
+    ctx.fillRect(0, 440, 800, 15);
+    // Sidewalk lines
+    ctx.strokeStyle = '#b8a890';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < 800; x += 60) {
+      ctx.beginPath(); ctx.moveTo(x, 440); ctx.lineTo(x, 455); ctx.stroke();
+    }
+    // Road
+    ctx.fillStyle = '#555';
+    ctx.fillRect(0, 455, 800, 45);
+    // Road lines
+    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 3; ctx.setLineDash([30, 20]);
+    ctx.beginPath(); ctx.moveTo(0, 478); ctx.lineTo(800, 478); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Palm trees
+    drawPalmTree(60, 440);
+    drawPalmTree(260, 440);
+    drawPalmTree(500, 440);
+    drawPalmTree(720, 440);
+  }
+
+  function drawCloud(x, y, s) {
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.beginPath(); ctx.arc(x, y, 22*s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+28*s, y+5*s, 18*s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x-22*s, y+8*s, 15*s, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+8*s, y+10*s, 20*s, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawBuilding(x, y, w, h, color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, w, h);
+    // Windows
+    ctx.fillStyle = 'rgba(255,255,200,0.6)';
+    for (let row = 0; row < Math.floor(h/22); row++) {
+      for (let col = 0; col < Math.floor(w/18); col++) {
+        if ((row + col) % 3 !== 0) {
+          ctx.fillRect(x+4+col*18, y+5+row*22, 9, 11);
+        }
+      }
+    }
+  }
+
+  function drawPalmTree(x, y) {
+    // Trunk
+    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.bezierCurveTo(x-5, y-30, x+5, y-60, x, y-80); ctx.stroke();
+    // Leaves
+    ctx.strokeStyle = '#228B22'; ctx.lineWidth = 4;
+    const leaves = [[0,-80],[-25,-95],[-40,-80],[-20,-70],[25,-95],[40,-80],[20,-70],[0,-65]];
+    leaves.forEach(([lx,ly])=>{
+      ctx.beginPath(); ctx.moveTo(x,y-80); ctx.lineTo(x+lx, y+ly); ctx.stroke();
+    });
+    // Coconuts
+    ctx.fillStyle = '#8B4513';
+    ctx.beginPath(); ctx.arc(x-5, y-82, 4, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+5, y-85, 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ===================== PERSON SPAWNING =====================
+  function spawnPerson() {
+    const typeIndex = Math.floor(Math.random() * personTypes.length);
+    const type = personTypes[typeIndex];
+    const isKid = (type.id === 'kid');
+    const scale = isKid ? 0.6 : 1.0;
+    const speed = (1.5 + Math.random() * 1.5) * (isKid ? 1.3 : 1);
+    const fromLeft = Math.random() > 0.5;
+    const x = fromLeft ? -50 : 850;
+    const dir = fromLeft ? 1 : -1;
+    const y = 438 - (isKid ? 0 : 2); // base foot Y
+
+    persons.push({
+      x, y, dir, speed, type, scale,
+      walkPhase: Math.random() * Math.PI * 2,
+      clicked: false,
+      clickEffect: 0, // 0=none, countdown to remove
+      hitbox: { w: isKid ? 60 : 80, h: isKid ? 70 : 110 }
+    });
+  }
+
+  // ===================== FLOATING TEXT =====================
+  function spawnFloatText(x, y, good) {
+    floatingTexts.push({ x, y, text: good ? '+1 ✓' : '-1 ✗', good, life: 1.0 });
+  }
+
+  function updateFloatTexts(dt) {
+    floatingTexts.forEach(ft => { ft.y -= 1.5; ft.life -= dt * 1.5; });
+    floatingTexts = floatingTexts.filter(ft => ft.life > 0);
+  }
+
+  function drawFloatTexts() {
+    floatingTexts.forEach(ft => {
+      ctx.globalAlpha = ft.life;
+      ctx.font = 'bold 22px Arial';
+      ctx.fillStyle = ft.good ? '#2ecc71' : '#e74c3c';
       ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(p.hatEmoji, 0, shoulderY - headR*1.9);
-    }
-
-    // type emoji badge
-    ctx.font = (headR * 1.1) + 'px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(p.emoji, headR*1.5, shoulderY - headR*(p.hatEmoji ? 3.2 : 2.1));
-
-    // hover highlight ring
-    const localMX = facingRight ? mouseX - cx : -(mouseX - cx);
-    const localMY = mouseY - feetY;
-    const bodyTopY = shoulderY - headR*2;
-    const inX = Math.abs(localMX) < H * 0.32;
-    const inY = localMY > bodyTopY - headR*0.5 && localMY < 5;
-    if (inX && inY) {
-      ctx.globalAlpha = 0.75;
-      ctx.strokeStyle = '#FFD700';
-      ctx.lineWidth   = 3;
-      ctx.setLineDash([5,4]);
-      ctx.beginPath();
-      ctx.ellipse(0, shoulderY - headR + H*0.22, H*0.26, H*0.56, 0, 0, Math.PI*2);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // show "点击!" prompt
+      ctx.fillText(ft.text, ft.x, ft.y);
       ctx.globalAlpha = 1;
-      ctx.font = 'bold ' + (headR*1.1) + 'px Arial';
-      ctx.fillStyle = '#FFD700';
-      ctx.textAlign = 'center';
-      ctx.fillText('点击!', 0, shoulderY - headR*3.0 - (p.hatEmoji ? headR*1.5 : 0));
-    }
-
-    ctx.restore();
+    });
+    ctx.textAlign = 'left';
   }
 
-  function drawVehicle(v) {
-    ctx.save();
-    ctx.font = v.size + 'px Arial';
-    ctx.textAlign = 'center';
-    if (v.vx < 0) {
-      ctx.scale(-1,1);
-      ctx.fillText(v.emoji, -v.x, v.y);
-    } else {
-      ctx.fillText(v.emoji, v.x, v.y);
-    }
-    ctx.restore();
+  // ===================== CLICK DETECTION =====================
+  function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY
+    };
   }
 
-  function drawCursor() {
-    if (mouseX < 0) return;
-    ctx.save();
-    ctx.font = '22px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('👆', mouseX - 4, mouseY - 24);
-    ctx.restore();
-  }
-
-  // ── HIT TEST ──
-  function personHitTest(p, mx, my) {
-    const H = p.personH;
-    const headR = H * 0.13;
-    const shoulderY = -(H - headR*2 - H*0.04);
-    const headTopY  = p.baseY + shoulderY - headR*2;
-    const withinX   = Math.abs(mx - p.x) < H * 0.35;
-    const withinY   = my > headTopY && my < p.baseY + 6;
-    return withinX && withinY;
-  }
-
-  // ── CLICK TO SCORE ──
   canvas.addEventListener('click', function(e) {
-    if (!running) return;
-    const rect = canvas.getBoundingClientRect();
-    const cx   = e.clientX - rect.left;
-    const cy   = e.clientY - rect.top;
-
-    for (let i = people.length - 1; i >= 0; i--) {
-      const p = people[i];
-      if (personHitTest(p, cx, cy)) {
-        const pts = p.good ? 1 : -1;
-        score = Math.max(-99, score + pts);
-        updateHUD();
-        showTooltip(p, e.clientX, e.clientY, pts);
-        p.flash     = 20;
-        p.flashGood = p.good;
-        if (p.good) {
-          p._jumpV  = -6;
-          p._jumped = true;
-        }
-        people.splice(i, 1);
-        if (score >= 5) {
-          running = false;
-          clearInterval(timerID);
-          stopSpawns();
-          cancelAnimationFrame(animFrame);
-          setTimeout(() => endLevel(true), 300);
-        }
+    if (!gameRunning) return;
+    const pos = getCanvasPos(e);
+    for (let i = persons.length - 1; i >= 0; i--) {
+      const p = persons[i];
+      if (p.clicked) continue;
+      const hw = p.hitbox.w / 2;
+      const hh = p.hitbox.h;
+      // Person center x is p.x; feet at p.y
+      if (pos.x >= p.x - hw && pos.x <= p.x + hw &&
+          pos.y >= p.y - hh && pos.y <= p.y) {
+        p.clicked = true;
+        p.clickEffect = 0.8;
+        const good = p.type.good;
+        score += good ? 1 : -1;
+        if (score < 0) score = 0;
+        hudScore.textContent = score + ' / 5';
+        spawnFloatText(p.x, p.y - hh * 0.7, good);
+        // Remove person after brief flash
+        setTimeout(() => {
+          const idx = persons.indexOf(p);
+          if (idx !== -1) persons.splice(idx, 1);
+        }, 400);
         break;
       }
     }
   });
 
-  // ── MOUSE MOVE (for hover) ──
+  // ===================== TOOLTIP =====================
   canvas.addEventListener('mousemove', function(e) {
-    const rect = canvas.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    mouseY = e.clientY - rect.top;
-  });
-
-  // ── TOUCH SUPPORT ──
-  canvas.addEventListener('touchstart', function(e) {
-    if (!running) return;
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const t    = e.touches[0];
-    const tx   = t.clientX - rect.left;
-    const ty   = t.clientY - rect.top;
-    mouseX = tx; mouseY = ty;
-    for (let i = people.length - 1; i >= 0; i--) {
-      const p = people[i];
-      if (personHitTest(p, tx, ty)) {
-        const pts = p.good ? 1 : -1;
-        score = Math.max(-99, score + pts);
-        updateHUD();
-        showTooltip(p, t.clientX, t.clientY, pts);
-        p.flash = 20; p.flashGood = p.good;
-        people.splice(i, 1);
-        if (score >= 5) {
-          running = false;
-          clearInterval(timerID);
-          stopSpawns();
-          cancelAnimationFrame(animFrame);
-          setTimeout(() => endLevel(true), 300);
-        }
+    if (!gameRunning) return;
+    const pos = getCanvasPos(e);
+    let found = false;
+    for (let i = persons.length - 1; i >= 0; i--) {
+      const p = persons[i];
+      const hw = p.hitbox.w / 2;
+      const hh = p.hitbox.h;
+      if (pos.x >= p.x - hw && pos.x <= p.x + hw &&
+          pos.y >= p.y - hh && pos.y <= p.y) {
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX - canvas.getBoundingClientRect().left + 15) + 'px';
+        tooltip.style.top  = (e.clientY - canvas.getBoundingClientRect().top - 30) + 'px';
+        const label = p.type.label + (p.type.good ? ' ✅ +1' : ' ❌ -1');
+        tooltip.textContent = label;
+        found = true;
+        canvas.style.cursor = 'pointer';
         break;
       }
     }
-  }, { passive: false });
-
-  canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const t    = e.touches[0];
-    mouseX = t.clientX - rect.left;
-    mouseY = t.clientY - rect.top;
-  }, { passive: false });
-
-  // ── TOOLTIP ──
-  function showTooltip(p, cx, cy, pts) {
-    tooltip.style.display = 'block';
-    tooltip.style.left    = (cx + 14) + 'px';
-    tooltip.style.top     = (cy - 20) + 'px';
-    if (pts > 0) {
-      tooltip.style.background = 'rgba(39,174,96,0.9)';
-      tooltip.textContent = '+1 ✅ ' + p.label;
-    } else {
-      tooltip.style.background = 'rgba(192,57,43,0.9)';
-      tooltip.textContent = '-1 ❌ ' + p.label + ' (错误目标！)';
+    if (!found) {
+      tooltip.style.display = 'none';
+      canvas.style.cursor = 'default';
     }
-    clearTimeout(tooltip._timer);
-    tooltip._timer = setTimeout(() => { tooltip.style.display = 'none'; }, 1400);
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    tooltip.style.display = 'none';
+    canvas.style.cursor = 'default';
+  });
+
+  // ===================== GAME LOOP =====================
+  let lastTime = 0;
+  function gameLoop(ts) {
+    const dt = Math.min((ts - lastTime) / 1000, 0.1);
+    lastTime = ts;
+
+    // Clear
+    ctx.clearRect(0, 0, 800, 500);
+    drawBackground();
+
+    // Spawn
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      spawnPerson();
+      spawnTimer = 0.8 + Math.random() * 0.8;
+    }
+
+    // Update & draw persons
+    persons = persons.filter(p => p.x > -150 && p.x < 950);
+    persons.forEach(p => {
+      if (!p.clicked) p.x += p.dir * p.speed;
+      p.walkPhase += dt * 6 * (p.clicked ? 0 : 1);
+
+      // Click flash effect
+      if (p.clicked) {
+        ctx.save();
+        ctx.globalAlpha = p.clickEffect;
+        ctx.fillStyle = p.type.good ? 'rgba(46,204,113,0.3)' : 'rgba(231,76,60,0.3)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y - p.hitbox.h/2, 40*p.scale, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+        p.clickEffect = Math.max(0, p.clickEffect - dt * 2);
+      }
+
+      drawPerson(p.x, p.y, p.type, p.walkPhase, p.scale);
+    });
+
+    // Floating texts
+    updateFloatTexts(dt);
+    drawFloatTexts();
+
+    // Score check
+    if (score >= 5) {
+      winLevel();
+      return;
+    }
+
+    if (gameRunning) animFrameId = requestAnimationFrame(gameLoop);
   }
 
-  // ── HUD UPDATE ──
-  function updateHUD() {
-    levelLabel.textContent = '第 ' + level + ' 关';
-    scoreLabel.textContent = score;
-    scoreLabel.style.color = score >= 0 ? '#7FFF00' : '#FF6B6B';
-    timerLabel.textContent = timeLeft + 's';
-    timerLabel.style.color = timeLeft <= 8 ? '#FF6B6B' : '#fff';
-  }
-
-  // ── TIMER ──
+  // ===================== TIMER =====================
   function startTimer() {
     timeLeft = 30;
-    updateHUD();
-    timerID = setInterval(function() {
-      if (!running) { clearInterval(timerID); return; }
+    hudTimer.textContent = timeLeft;
+    timerInterval = setInterval(() => {
+      if (!gameRunning) { clearInterval(timerInterval); return; }
       timeLeft--;
-      updateHUD();
+      hudTimer.textContent = timeLeft;
       if (timeLeft <= 0) {
-        clearInterval(timerID);
-        running = false;
-        stopSpawns();
-        cancelAnimationFrame(animFrame);
-        endLevel(score >= 5);
+        clearInterval(timerInterval);
+        gameRunning = false;
+        cancelAnimationFrame(animFrameId);
+        showFailScreen();
       }
     }, 1000);
   }
 
-  // ── SPAWNS ──
-  function startSpawns() {
-    const interval = Math.max(1000, 1600 - (level-1)*150);
-    spawnPeopleID = setInterval(spawnPerson, interval);
-    spawnCarID    = setInterval(spawnVehicle, 2600);
-    spawnPerson(); spawnPerson(); spawnVehicle();
-  }
-  function stopSpawns() {
-    clearInterval(spawnPeopleID);
-    clearInterval(spawnCarID);
-  }
+  // ===================== WIN LEVEL =====================
+  function winLevel() {
+    gameRunning = false;
+    clearInterval(timerInterval);
+    cancelAnimationFrame(animFrameId);
+    tooltip.style.display = 'none';
 
-  // ── GAME LOOP ──
-  function gameLoop() {
-    if (!running) return;
-    walkTick++;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    drawBackground();
-    drawClouds();
-    buildings.forEach(drawBuilding);
-
-    clouds.forEach(c => { c.x += c.speed; if (c.x - c.r > canvas.width) c.x = -c.r*2; });
-
-    vehicles = vehicles.filter(v => v.x > -120 && v.x < canvas.width + 120);
-    vehicles.forEach(v => { v.x += v.vx; drawVehicle(v); });
-
-    people = people.filter(p => p.x > -90 && p.x < canvas.width + 90);
-    people.forEach(p => {
-      p.x += p.vx;
-      if (p.flash > 0) p.flash--;
-      drawPerson(p);
-    });
-
-    drawCursor();
-    animFrame = requestAnimationFrame(gameLoop);
-  }
-
-  // ── START LEVEL ──
-  function startLevel() {
-    score    = 0;
-    running  = true;
-    people   = [];
-    vehicles = [];
-    walkTick = 0;
-
-    canvas.style.display = 'block';
-    hud.style.display    = 'flex';
-    startScreen.style.display    = 'none';
-    cutsceneScreen.style.display = 'none';
-    treasureScreen.style.display = 'none';
-    failScreen.style.display     = 'none';
-
-    buildScene();
-    updateHUD();
-    startTimer();
-    startSpawns();
-    gameLoop();
-  }
-
-  // ── END LEVEL ──
-  function endLevel(won) {
-    hud.style.display = 'none';
-    if (won) {
-      if (level === 3) {
-        showTreasure();
-      } else {
-        showCutscene(level);
-      }
+    if (level === 3) {
+      showTreasureScreen();
     } else {
-      showFail();
+      showCutscene();
     }
   }
 
-  // ── CUTSCENE (win level 1 or 2) ──
-  let cutsceneTimer    = null;
-  let cutsceneProgress = 0;
-  let cutsceneDuration = 3500;
-  let cutsceneInterval = null;
-  let cutsceneNextLevel = 1;
-
-  const CUTSCENES = [
-    {
-      title: '🎉 第1关完成！大口吃汉堡！',
-      frames: ['🍔😐','🍔😮','😋🍔','😁🤤','🤤😆','😆🍔'],
-      desc: '经纪人大口大口吃汉堡，嚼得满嘴油！',
-      bg: 'rgba(255,200,0,0.85)',
-    },
-    {
-      title: '🎉 第2关完成！大口吃面条！',
-      frames: ['🍜😐','🍜😮','😋🍜','🍝😆','😆🍜','🤤🍝'],
-      desc: '经纪人大口大口嗦面条，溅了一身汤！',
-      bg: 'rgba(150,50,200,0.85)',
-    },
+  // ===================== CUTSCENE =====================
+  const cutsceneData = [
+    { emoji:'🍔', title:'第一关过了！', text:'辛苦了！去吃个汉堡庆祝 🍔\n明天继续拉客！' },
+    { emoji:'🍜', title:'第二关过了！', text:'不错嘛！奖励自己一碗拉面 🍜\n最后一关加油！' },
   ];
+  let cutsceneBarInterval = null;
+  let cutsceneBarVal = 100;
 
-  function showCutscene(completedLevel) {
-    const cs = CUTSCENES[completedLevel - 1];
-    cutsceneNextLevel = completedLevel + 1;
-
-    document.getElementById('cutsceneTitle').textContent = cs.title;
-    document.getElementById('cutsceneDesc').textContent  = cs.desc;
-    cutsceneScreen.style.background = cs.bg;
+  function showCutscene() {
+    const data = cutsceneData[level - 1];
+    document.getElementById('cutsceneEmoji').textContent = data.emoji;
+    document.getElementById('cutsceneTitle').textContent = data.title;
+    document.getElementById('cutsceneText').textContent  = data.text;
+    const bar = document.getElementById('cutsceneBar');
+    cutsceneBarVal = 100;
+    bar.style.width = '100%';
     cutsceneScreen.style.display = 'flex';
 
-    cutsceneProgress = 0;
-    document.getElementById('cutsceneProgressFill').style.width = '0%';
-
-    let frameIdx = 0;
-    clearInterval(cutsceneInterval);
-    clearTimeout(cutsceneTimer);
-
-    const anim = document.getElementById('cutsceneAnim');
-    anim.textContent = cs.frames[0];
-
-    cutsceneInterval = setInterval(function() {
-      frameIdx = (frameIdx + 1) % cs.frames.length;
-      anim.textContent = cs.frames[frameIdx];
-    }, 280);
-
-    const tickMs = 50;
-    const totalTicks = cutsceneDuration / tickMs;
-    let tick = 0;
-    cutsceneTimer = setInterval(function() {
-      tick++;
-      cutsceneProgress = Math.min(100, (tick / totalTicks) * 100);
-      document.getElementById('cutsceneProgressFill').style.width = cutsceneProgress + '%';
-      if (cutsceneProgress >= 100) {
-        clearInterval(cutsceneTimer);
-        clearInterval(cutsceneInterval);
-        advanceCutscene();
+    if (cutsceneBarInterval) clearInterval(cutsceneBarInterval);
+    cutsceneBarInterval = setInterval(() => {
+      cutsceneBarVal -= 1;
+      bar.style.width = cutsceneBarVal + '%';
+      if (cutsceneBarVal <= 0) {
+        clearInterval(cutsceneBarInterval);
+        advanceLevel();
       }
-    }, tickMs);
+    }, 40); // 4 seconds total
   }
 
-  function advanceCutscene() {
-    clearInterval(cutsceneTimer);
-    clearInterval(cutsceneInterval);
+  function advanceLevel() {
+    clearInterval(cutsceneBarInterval);
     cutsceneScreen.style.display = 'none';
-    level = cutsceneNextLevel;
+    level++;
     startLevel();
   }
 
-  // ── TREASURE SCREEN (level 3 win) ──
-  let treasureAnimFrame  = null;
-  let treasureParticles  = [];
+  // ===================== TREASURE SCREEN =====================
+  let treasureBarInterval = null;
 
-  const tCanvas = document.getElementById('treasureCanvas');
-  const tCtx    = tCanvas.getContext('2d');
-
-  function showTreasure() {
+  function showTreasureScreen() {
+    const bar = document.getElementById('treasureBar');
+    let val = 100;
+    bar.style.width = '100%';
     treasureScreen.style.display = 'flex';
-    tCanvas.width  = window.innerWidth;
-    tCanvas.height = window.
+
+    if (treasureBarInterval) clearInterval(treasureBarInterval);
+    treasureBarInterval = setInterval(() => {
+      val -= 0.8;
+      bar.style.width = val + '%';
+      if (val <= 0) clearInterval(treasureBarInterval);
+    }, 40);
+  }
+
+  // ===================== FAIL SCREEN =====================
+  let failBarInterval = null;
+
+  function showFailScreen() {
+    const bar = document.getElementById('failBar');
+    let val = 100;
+    bar.style.width = '100%';
+    failScreen.style.display = 'flex';
+    tooltip.style.display = 'none';
+
+    if (failBarInterval) clearInterval(failBarInterval);
+    failBarInterval = setInterval(() => {
+      val -= 1;
+      bar.style.width = val + '%';
+      if (val <= 0) clearInterval(failBarInterval);
+    }, 40);
+  }
+
+  // ===================== START / RESET =====================
+  function startLevel() {
+    persons = [];
+    floatingTexts = [];
+    score = 0;
+    spawnTimer = 0;
+    hudLevel.textContent = level;
+    hudScore.textContent  = '0 / 5';
+    hudTimer.textContent  = '30';
+
+    canvas.style.display = 'block';
+    hud.style.display = 'flex';
+    cutsceneScreen.style.display = 'none';
+    failScreen.style.display     = 'none';
+    treasureScreen.style.display = 'none';
+
+    gameRunning = true;
+    lastTime = 0;
+    animFrameId = requestAnimationFrame(function(ts) { lastTime = ts; gameLoop(ts); });
+    startTimer();
+  }
+
+  function resetGame() {
+    clearInterval(timerInterval);
+    clearInterval(cutsceneBarInterval);
+    clearInterval(failBarInterval);
+    clearInterval(treasureBarInterval);
+    cancelAnimationFrame(animFrameId);
+    gameRunning = false;
+    level = 1;
+    cutsceneScreen.style.display = 'none';
+    failScreen.style.display     = 'none';
+    treasureScreen.style.display = 'none';
+    startLevel();
+  }
+
+  // ===================== BUTTON HANDLERS =====================
+  // Start button
+  document.getElementById('startBtn').addEventListener('click', function() {
+    startScreen.style.display = 'none';
+    level = 1;
+    startLevel();
+  });
+
+  // Cutscene skip button
+  document.getElementById('cutsceneSkipBtn').addEventListener('click', function() {
+    advanceLevel();
+  });
+
+  // Treasure next button (restart from level 1 or just show title again)
+  document.getElementById('treasureNextBtn').addEventListener('click', function() {
+    clearInterval(treasureBarInterval);
+    treasureScreen.style.display = 'none';
+    // Go back to start screen
+    canvas.style.display = 'none';
+    hud.style.display = 'none';
+    startScreen.style.display = 'flex';
+    level = 1;
+    gameRunning = false;
+  });
+
+  // Fail retry button
+  document.getElementById('failRetryBtn').addEventListener('click', function() {
+    clearInterval(failBarInterval);
+    failScreen.style.display = 'none';
+    // Retry same level
+    startLevel();
+  });
+
+  // ===================== CANVAS SCALING =====================
+  // Responsive scaling so the game fits any screen
+  function resizeGame() {
+    const container = document.getElementById('gameContainer');
+    const ww = window.innerWidth;
+    const wh = window.innerHeight;
+    const scale = Math.min(ww / 820, wh / 520);
+    container.style.transform = `scale(${scale})`;
+    container.style.transformOrigin = 'center center';
+  }
+  window.addEventListener('resize', resizeGame);
+  resizeGame();
+
+}); // end DOMContentLoaded
+</script>
+</body>
+</html>
